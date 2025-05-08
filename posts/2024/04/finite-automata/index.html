@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+  
+    
+  <title>Finite Automata | EVER BLOG</title>
+  <meta name="author" content="Ever">
+  <meta name="description" content="DFA一台有穷自动机有若干部分: 
+一个状态集和根据输入符号从一个状态到另一个状态的规则。 
+一个输入字母表，指明所有允许的输入符号。 
+一个起始状态和一个接受状态集。 
+形式化定义把一台有穷自动机描述成一张含以下5部分的表：状态集、输入字母表、动作规则、起始状态以及接受状态集。用数学语言表达，5个元素的表经常称为5元组。因此，定义有穷自动机是由这5部分组成的5元组。 ">
+  <meta name="keywords" content="blog, developer, personal">
+
+  <meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+
+  
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Finite Automata">
+  <meta name="twitter:description" content="DFA一台有穷自动机有若干部分: 一个状态集和根据输入符号从一个状态到另一个状态的规则。 一个输入字母表，指明所有允许的输入符号。 一个起始状态和一个接受状态集。 形式化定义把一台有穷自动机描述成一张含以下5部分的表：状态集、输入字母表、动作规则、起始状态以及接受状态集。用数学语言表达，5个元素的表经常称为5元组。因此，定义有穷自动机是由这5部分组成的5元组。">
+
+  <meta property="og:url" content="http://localhost:1313/posts/2024/04/finite-automata/">
+  <meta property="og:site_name" content="EVER BLOG">
+  <meta property="og:title" content="Finite Automata">
+  <meta property="og:description" content="DFA一台有穷自动机有若干部分: 一个状态集和根据输入符号从一个状态到另一个状态的规则。 一个输入字母表，指明所有允许的输入符号。 一个起始状态和一个接受状态集。 形式化定义把一台有穷自动机描述成一张含以下5部分的表：状态集、输入字母表、动作规则、起始状态以及接受状态集。用数学语言表达，5个元素的表经常称为5元组。因此，定义有穷自动机是由这5部分组成的5元组。">
+  <meta property="og:locale" content="zh_cn">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-04-20T00:00:00+08:00">
+    <meta property="article:modified_time" content="2025-05-08T15:33:58+08:00">
+    <meta property="article:tag" content="自动机">
+    <meta property="article:tag" content="正则表达式">
+
+  <link rel="stylesheet" href="/css/bootstrap.min.css"  crossorigin="anonymous">
+  
+  <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.2.1/css/all.min.css" rel="stylesheet" type="text/css">
+
+  <link rel="stylesheet" href="/sass/main.css">
+
+  <link rel="stylesheet" href="/zoomjs/zoom.min.css">
+
+  <script src=/js/lazysizes.min.js></script>
+
+  
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="manifest" href="/site.webmanifest">
+  
+
+</head>
+
+
+
+<body ontouchstart="">
+  
+  
+  <nav class="navbar navbar-default navbar-custom navbar-fixed-top invert">
+  <div class="container-fluid">
+    
+    <div class="navbar-header page-scroll">
+      <button type="button" class="navbar-toggle">
+        <span class="sr-only">Toggle navigation</span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="http://localhost:1313/">EVER BLOG</a>
+    </div>
+    
+    <div id="huxblog_navbar">
+      <div class="navbar-collapse">
+        <ul class="nav navbar-nav navbar-right">
+          
+          <li><a href="/" title="Home">Home</a></li>
+          
+          <li><a href="/series/" title="Series">Series</a></li>
+          
+          <li><a href="/archive/" title="Archive">Archive</a></li>
+          
+          <li><a href="/about/" title="About">About</a></li>
+          
+
+          <li class="search-icon">
+            <a href="javascript:void(0)">
+              <i class="fa fa-search"></i>
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+    
+  </div>
+  
+</nav>
+<script>
+  
+  
+  
+  var $body = document.body;
+  var $toggle = document.querySelector(".navbar-toggle");
+  var $navbar = document.querySelector("#huxblog_navbar");
+  var $collapse = document.querySelector(".navbar-collapse");
+
+  var __HuxNav__ = {
+    close: function () {
+      $navbar.className = " ";
+      
+      setTimeout(function () {
+        
+        if ($navbar.className.indexOf("in") < 0) {
+          $collapse.style.height = "0px";
+        }
+      }, 400);
+    },
+    open: function () {
+      $collapse.style.height = "auto";
+      $navbar.className += " in";
+    },
+  };
+
+  
+  $toggle.addEventListener("click", function (e) {
+    if ($navbar.className.indexOf("in") > 0) {
+      __HuxNav__.close();
+    } else {
+      __HuxNav__.open();
+    }
+  });
+
+  
+
+  document.addEventListener("click", function (e) {
+    if (e.target == $toggle) return;
+    if (e.target.className == "icon-bar") return;
+    __HuxNav__.close();
+  });
+</script>
+  
+<div class="search-page">
+  <div class="search-icon-close-container">
+    <span class="search-icon-close">
+      <i class="fa fa-chevron-down"></i>
+    </span>
+  </div>
+  <div class="search-main container">
+    <div class="row">
+      <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+        <form></form>
+        <input type="text" id="search-input" placeholder="$ grep...">
+        </form>
+        <div id="search-results" class="mini-post-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+  
+
+
+<style type="text/css">
+  header.intro-header {
+    position: relative;
+    background-image: url('');
+  }
+</style>
+
+<header class="intro-header style-text">
+
+  <div class="header-mask"></div>
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-10 col-lg-offset-1 col-md-10 col-md-offset-1">
+        <div class="post-heading">
+          <div class="tags">
+            
+            <a class="tag" href="/tags/%E8%87%AA%E5%8A%A8%E6%9C%BA/" title="自动机">自动机</a>
+            
+            <a class="tag" href="/tags/%E6%AD%A3%E5%88%99%E8%A1%A8%E8%BE%BE%E5%BC%8F/" title="正则表达式">正则表达式</a>
+            
+          </div>
+          <h1>Finite Automata</h1>
+          <h2 class="subheading"></h2>
+          <span class="meta">
+            Posted by
+
+
+<span class="author">
+  
+  Ever
+  
+</span>
+
+on Sat, Apr 20, 2024
+
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+
+
+  
+
+
+<article>
+  <div class="container">
+    <div class="row">
+
+      
+      <div class="
+              col-lg-9 col-lg-offset-1
+              col-md-10 col-md-offset-1
+              post-container">
+        <h2 id="dfa">DFA<a class="anchorjs-link" href="#dfa"></a></h2><p>一台有穷自动机有若干部分: <br/>
+一个状态集和根据输入符号从一个状态到另一个状态的规则。 <br/>
+一个输入字母表，指明所有允许的输入符号。 <br/>
+一个起始状态和一个接受状态集。 <br/>
+形式化定义把一台有穷自动机描述成一张含以下5部分的表：状态集、输入字母表、动作规则、起始状态以及接受状态集。用数学语言表达，5个元素的表经常称为5元组。因此，定义有穷自动机是由这5部分组成的5元组。 <br/></p>
+<p>用转移函数（transition function）定义动作规则，常记作δ。如果有穷自动机有从状态x到状态y标有输入符号1的箭头，这表示当它处于状态x时读到1，则转移到状态y。可以用转移函数讲清楚这件事，记作δ(x，1)=y。这个记号是一种数学简写方式。把这些结合在一起得到有穷自动机的形式化定义。 <br/></p>
+<h3 id="定义">定义<a class="anchorjs-link" href="#%e5%ae%9a%e4%b9%89"></a></h3><div class="definition">
+<p><strong>(DFA)</strong> <br/></p>
+<p>*确定性有穷状态自动机*（Deterministic finite automata，DFA）是一个五元组： <br/></p>
+<p>\[M = (Q, \Sigma, \delta, q_0, F)\] <br/></p>
+<ul>
+<li>\(Q\)：状态（state）的非空有穷集合 <br/></li>
+<li>\(\Sigma\)：输入字母表（input alphabet） <br/></li>
+<li>\(\delta\)：状态转移函数（transition function） <br/>
+<ul>
+<li>\(\delta : Q \times \Sigma \rightarrow Q\) <br/></li>
+<li>\(\delta(q, a) = p\) 表示 \(M\) 在状态 \(q\) 下读入字符 \(a\)，则将状态转移到 \(p\) 并将读头指向下一字符串 <br/></li>
+</ul>
+</li>
+<li>\(q_0\)：开始状态（initial state），\(q_0 \in Q\) <br/></li>
+<li>\(F\)：终止状态（final state）或接受状态（accept state），\(F \subseteq Q\) <br/></li>
+</ul>
+</div>
+<h2 id="nfa">NFA<a class="anchorjs-link" href="#nfa"></a></h2><p>与DFA的最大区别是对于一个输入，NFA有多个转移。 <br/></p>
+<h3 id="定义">定义<a class="anchorjs-link" href="#%e5%ae%9a%e4%b9%89"></a></h3><div class="definition">
+<p><strong>(NFA)</strong> <br/></p>
+<p>*非确定性有穷状态自动机*（non-deterministic finite automaton，NFA） <br/></p>
+<p>\[M =(Q, \Sigma, \delta, q_0, F)\] <br/></p>
+<ul>
+<li>\(Q, \Sigma, q_0, F\) 的意义与 DFA 相同 <br/></li>
+<li>\(\delta: Q \times \Sigma \rightarrow 2^Q\) <br/>
+<ul>
+<li>\(\delta(q, a) = \{p_1, p_2, \cdots p_m\} | p_i \subseteq Q\) 表示 \(M\) 在状态 \(q\) 下读入字符 \(a\)，可以将状态转移到 \(p_i\) 并指向下一个字符 <br/></li>
+</ul>
+</li>
+</ul>
+</div>
+<h2 id="varepsilon-nfa">\(\varepsilon\)-NFA<a class="anchorjs-link" href="#varepsilon-nfa"></a></h2><p>即带有空转移的NFA。 <br/></p>
+<h3 id="定义">定义<a class="anchorjs-link" href="#%e5%ae%9a%e4%b9%89"></a></h3><div class="definition">
+<p><strong>(\(\varepsilon\)-NFA)</strong> <br/></p>
+<p>*带空转移的非确定性有穷状态自动机*（non-deterministic finite automaton with \(\varepsilon\) moves，\(\varepsilon\)-NFA） <br/></p>
+<p>\[M =(Q, \Sigma, \delta, q_0, F)\] <br/></p>
+<ul>
+<li>\(Q, \Sigma, q_0, F\) 的意义与 DFA 相同 <br/></li>
+<li>\(\delta: Q \times (\Sigma \cup \{ \varepsilon \}) \rightarrow 2^Q\) <br/>
+<ul>
+<li>对于 \(\delta(q, s) = \{p_1, p_2, \cdots p_m\}\) 表示 \(M\) 在状态 \(q\) 下读入字符 \(a\)，则可以将状态转移到 \(p_i\) 并将读头指向下一个字符 <br/></li>
+<li>对于 \(\delta(q, \varepsilon) = \{p_1, p_2, \cdots p_m\}\) 表示 \(M\) 在状态 \(q\) 下不读入字符，并将状态转移到 \(p_i\) <br/></li>
+</ul>
+</li>
+</ul>
+</div>
+<h2 id="正则表达式">正则表达式<a class="anchorjs-link" href="#%e6%ad%a3%e5%88%99%e8%a1%a8%e8%be%be%e5%bc%8f"></a></h2><p>假设有一个字母表 \(\Sigma\)，正则表达式描述了 $Σ$字符（外加表示空串的特殊字符\(\varepsilon\)）构成的字符串集合。由正则表达式定义的字符串集合称为一个语言，记作\(L( r)\)（其中 \(r\) 为某个正则表达式）。 <br/></p>
+<p>正则表达式由以下三种基本运算构成： <br/></p>
+<div class="definition">
+<ul>
+<li>
+<p>Alternation：或操作，记作\(r \mid s\)，其语言为\(\{ x \mid x \in L( r) \lor x \in L(s) \}\)。 <br/></p>
+</li>
+<li>
+<p>Concatenation：并操作，记作 \(rs\)，即\(\{ xy \mid x \in L( r) \land y \in L(s) \}\)。 <br/></p>
+</li>
+<li>
+<p>Closure：\(r\) 的柯林闭包（Kleene closure），记作 \(r^*\)，定义为\(\bigcup\limits_{i=0}^{\infty} r^i\)。 \(L(r^*)\) 包含由 \(L( r)\) 中的字符串通过零次或多次连接构成的所有字符串。 <br/></p>
+</li>
+</ul>
+</div>
+<h2 id="正则语言与-fa">正则语言与 FA<a class="anchorjs-link" href="#%e6%ad%a3%e5%88%99%e8%af%ad%e8%a8%80%e4%b8%8e-fa"></a></h2><h3 id="rl-与-fa-等价">RL 与 FA 等价<a class="anchorjs-link" href="#rl-%e4%b8%8e-fa-%e7%ad%89%e4%bb%b7"></a></h3><div class="theorem">
+<p>RL 与 FA 等价。 <br/></p>
+</div>
+<div class="proof">
+<p>只要证明 RL \(\subseteq\) FA，且 FA \(\subseteq\) RL 即可。 <br/></p>
+<ul>
+<li>
+<p>首先证明 FA 能够接受 RL。需要对于任意 RL，要构造一个与之等价的 FA。对于正则文法 \(G = (V, T, P, S)\)，构造 \(M = (V \cup \{Z\}, T, \delta, S, \{Z\})\)，其中 \(\delta\) 的定义如下： <br/></p>
+<p>\[\delta(A, a) =
+\begin{cases}
+\{B | A \rightarrow aB \in P\} \cup \{Z\}, &amp; A \rightarrow a \in P \\
+\{B | A \rightarrow aB \in P\} , &amp; A \rightarrow a \notin P
+\end{cases}\] <br/></p>
+<p>下面证明 \(L(M) = L(G)\)。设 \(a_1 a_2 \dots a_n \in L(G)\)，即有推导 <br/></p>
+<p>\begin{aligned}
+&amp; S \xRightarrow{+} a_1 a_2 \dots a_n \\
+\Leftrightarrow&amp; S \Rightarrow a_1 A_1 \Rightarrow a_1 a_2 A_2 \Rightarrow \dots \Rightarrow a_1 a_2 \dots a_n
+\end{aligned}</p>
+<p>因此 <br/></p>
+<p>\begin{aligned}
+&amp; S \rightarrow a_1 A_1 \in P \\
+&amp; A_1 \rightarrow a_2 A_2 \in P \\
+&amp; \dots \\
+&amp; A_{n-2} \rightarrow a_{n-1} A_{n-1} \in P \\
+&amp; A_{n-1} \rightarrow a_n \in P
+\end{aligned}</p>
+<p>根据此文法，对于 \(\delta\) 有 <br/></p>
+<p>\begin{aligned}
+&amp; A_1 \in \delta(S, a_1) \\
+&amp; A_2 \in \delta(A_1, a_2) \\
+&amp; \dots \\
+&amp; A_{n-1} \in \delta(A_{n-2}, a_{n-1}) \\
+&amp; Z \in \delta(A_{n-1}, a_n)
+\end{aligned}</p>
+<p>因此 \(Z \in \delta(S, a_1 a_2 \dots a_n)\)，成立。 <br/></p>
+<p>这里需要特殊处理 \(\varepsilon\) 的情况。不妨假设 \(S\) 不出现在任何产生式的右部。设 \(S \rightarrow \varepsilon \in P\)，则定义转移 \(\delta(S, \varepsilon) = \{Z\}\)，由于 \(S\) 不出现在产生式的右部，因此 FA 上的转移无法回到 \(S\)，即这个转移不会对其他句子的接受产生影响。 <br/></p>
+</li>
+<li>
+<p>下面证明 FA 接受的句子都是 RL。由于三种 FA 等价，因此这里只需要证明 DFA 接受的句子是 RL。设 DFA \(M = (Q, \Sigma, \delta, q_0, F)\)，构造 \(G = (Q, \Sigma, P, q_0)\)，其中 <br/></p>
+<p>\[P = \{ q \rightarrow a p | \delta(q, a) = p \} \cup \{q \rightarrow a | \delta(q, a) = p \in F \}\] <br/></p>
+<p>证明类似。同样这里需要考虑 \(\varepsilon\) 相关的句子。假设 \(q_0 \notin F\)，则 \(\varepsilon \notin L(M)\)，不影响。如果 \(q_0 \in F\)，由于空句子存在与否不影响语言性质，因此存在正则文法 \(G&rsquo;\) 使得 \(L(G&rsquo;) = L(G) \cup \{\varepsilon\} = L(M)\)。 <br/></p>
+</li>
+</ul>
+<p>综上，命题成立。 <br/></p>
+</div>
+<h2 id="从正则表达式到dfa">从正则表达式到DFA<a class="anchorjs-link" href="#%e4%bb%8e%e6%ad%a3%e5%88%99%e8%a1%a8%e8%be%be%e5%bc%8f%e5%88%b0dfa"></a></h2><p><figure><img data-src="/imgs/automata/transform.png"
+         data-action="zoom"
+         class="lazyload"/>
+</figure>
+ <br/></p>
+<ul>
+<li>使用Thompson构造法，从RE构造出一个NFA <br/></li>
+</ul>
+<p><figure>
+  <a class="paragraph-image">
+    <img data-src="/imgs/automata/re2NFA.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure> <br/>
+由Thompson构造法生成的NFA具有一些特定的性质，这些性质简化了其实现过程。每个NFA都有一个开始状态和一个接受状态。 <br/>
+除了初始转换外，没有任何转换会进入开始状态；也没有任何转换会从接受状态离开。 <br/>
+最后，每个状态最多有两个ε转换的进入和两个ε转换的离开，并且在字母表中的某个符号上，最多只有一个进入和一个离开转换。所有这些性质共同简化了NFA的表示和操作。 <br/></p>
+<ul>
+<li>使用子集构造法将NFA转化为DFA <br/>
+<ul>
+<li>FollowEpsilon(n)表示从n出发经过一个或多个\(\varepsilon\)转换所能到达的状态集合加上n。 <br/></li>
+<li>Delta(q,c) q为一个集合，初始值为q0,返回q中所有元素应用对应状态转移函数所能到达状态的集合。 <br/></li>
+<li>核心思想是尽可能的将NFA中的状态集对应到DFA中的单个状态。 <br/></li>
+<li>算法主体是数据流分析中十分常用的不动点迭代，不停的减小问题规模，直到集合为空。 <br/></li>
+</ul>
+</li>
+</ul>
+<div class="definition">
+<p>\begin{array}{l}
+q_0 \gets \text{FollowEpsilon}(\{n_0\}) \\
+Q \gets q_0 \\
+\text{WorkList} \gets \{ q_0 \} \\
+\textbf{while } \text{WorkList} \neq \emptyset \text{ do} \\
+\quad \text{remove } q \text{ from WorkList} \\
+\quad \textbf{for each character } c \in \Sigma \text{ do} \\
+\quad\quad \text{temp} \gets \text{FollowEpsilon}(Delta(q, c)) \\
+\quad\quad \textbf{if } \text{temp} \neq \emptyset \text{ then} \\
+\quad\quad\quad \textbf{if } \text{temp} \notin Q \text{ then} \\
+\quad\quad\quad\quad \text{add temp to both } Q \text{ and WorkList} \\
+\quad\quad\quad \textbf{end if} \\
+\quad\quad\quad T[q, c] \gets \text{temp} \\
+\quad\quad \textbf{end if} \\
+\quad \textbf{end for} \\
+\textbf{end while}
+\end{array}</p>
+</div>
+<ul>
+<li>
+<p>最小化DFA <br/></p>
+<ul>
+<li>关键在于检测DFA中的两个状态是否相等，如果这两个状态对于所有的输入a,都有同样的行为，那么这两个状态相等，可以合并。 <br/></li>
+</ul>
+<div class="definition">
+<p>\begin{array}{l}
+\text{Partition} \leftarrow \{ D - D_A \} \\
+\text{Worklist} \leftarrow \{  D - D_A \} \\
+\textbf{while } \text{Worklist} \neq \emptyset \textbf{ do} \\
+\quad \text{select a set } s \text{ from Worklist and remove it} \\
+\quad \textbf{for each character } c \in \Sigma \textbf{ do} \\
+\quad\quad \text{Image} \leftarrow \{ x \mid \delta(x, c) \in s \} \\
+\quad\quad \textbf{for each set } q \in \text{Partition that has a state in Image do} \\
+\quad\quad\quad q_1 \leftarrow q \cap \text{Image} \\
+\quad\quad\quad q_2 \leftarrow q - q_1 \\
+\quad\quad\quad \textbf{if } q_2 \neq \emptyset \textbf{ then} \\
+\quad\quad\quad\quad \text{remove } q \text{ from Partition} \\
+\quad\quad\quad\quad \text{Partition} \leftarrow \text{Partition} \cup \{ q_1, q_2 \} \\
+\quad\quad\quad\quad \textbf{if } q \in \text{Worklist then} \\
+\quad\quad\quad\quad\quad \text{remove } q \text{ from Worklist} \\
+\quad\quad\quad\quad\quad \text{Worklist} \leftarrow \text{Worklist} \cup \{ q_1, q_2 \} \\
+\quad\quad\quad\quad \textbf{else if } |q_1| \leq |q_2| \textbf{ then} \\
+\quad\quad\quad\quad\quad \text{Worklist} \leftarrow \text{Worklist} \cup \{ q_1 \} \\
+\quad\quad\quad\quad \textbf{else} \\
+\quad\quad\quad\quad\quad \text{Worklist} \leftarrow \text{Worklist} \cup \{ q_2 \} \\
+\quad\quad\quad\quad \textbf{if } s = q \textbf{ then break} \\
+\end{array}</p>
+</div>
+</li>
+</ul>
+
+
+        <hr style="visibility: hidden;" />
+        <ul class="pager">
+          
+          
+          <li class="next">
+            <a href="/posts/2024/04/llvm-backend/" data-toggle="tooltip" data-placement="top" title="Llvm Backend">
+              Next<br>
+              <span>Llvm Backend</span>
+            </a>
+          </li>
+          
+        </ul>
+        <hr style="visibility: hidden;" />
+
+        
+        
+
+
+
+<script
+  src="https://utteranc.es/client.js"
+  repo="roife/hugo-theme-pupi"
+  issue-term="pathname"
+  label="Comment"
+  theme="preferred-color-scheme"
+  crossorigin="anonymous"
+  async></script>
+
+
+
+
+        
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.css" integrity="sha384-vKruj+a13U8yHIkAyGgK1J3ArTLzrFGBbBc0tDp4ad/EyewESeXE/Iv67Aj8gKZ0" crossorigin="anonymous">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.js" integrity="sha384-PwRUT/YqbnEjkZO0zZxNqcxACrXe+j766U2amXcgMg5457rve2Y7I6ZJSm2A0mS4" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/contrib/auto-render.min.js" integrity="sha384-+VBxd3r6XgURycqtZ117nYw44OOcIax56Z4dCRWbxyPt0Koah1uHoK0o4+/RRE05" crossorigin="anonymous"></script>
+<script>
+ document.addEventListener("DOMContentLoaded", function() {
+   renderMathInElement(document.body, {
+     
+     
+     delimiters: [
+       {left: "\\(", right: "\\)", display: false},
+
+       {left: "\\begin{array}", right: "\\end{array}", display: true},
+
+       {left: "\\begin{matrix}", right: "\\end{matrix}", display: true},
+       {left: "\\begin{matrix*}", right: "\\end{matrix*}", display: true},
+       {left: "\\begin{bmatrix}", right: "\\end{bmatrix}", display: true},
+       {left: "\\begin{bmatrix*}", right: "\\end{bmatrix*}", display: true},
+       {left: "\\begin{Bmatrix}", right: "\\end{Bmatrix}", display: true},
+       {left: "\\begin{Bmatrix*}", right: "\\end{Bmatrix*}", display: true},
+       {left: "\\begin{vmatrix}", right: "\\end{vmatrix}", display: true},
+       {left: "\\begin{vmatrix*}", right: "\\end{vmatrix*}", display: true},
+       {left: "\\begin{Vmatrix}", right: "\\end{Vmatrix}", display: true},
+       {left: "\\begin{Vmatrix*}", right: "\\end{Vmatrix*}", display: true},
+       {left: "\\begin{pmatrix}", right: "\\end{pmatrix}", display: true},
+       {left: "\\begin{pmatrix*}", right: "\\end{pmatrix*}", display: true},
+       {left: "\\begin{smallmatrix}", right: "\\end{smallmatrix}", display: true},
+
+       {left: "\\begin{cases}", right: "\\end{cases}", display: true},
+       {left: "\\begin{rcases}", right: "\\end{rcases}", display: true},
+
+       {left: "\\begin{equation}", right: "\\end{equation}", display: true},
+       {left: "\\begin{equation*}", right: "\\end{equation*}", display: true},
+       {left: "\\begin{align}", right: "\\end{align}", display: true},
+       {left: "\\begin{align*}", right: "\\end{align*}", display: true},
+       {left: "\\begin{alignat}", right: "\\end{alignat}", display: true},
+       {left: "\\begin{alignat*}", right: "\\end{alignat*}", display: true},
+       {left: "\\begin{gather}", right: "\\end{gather}", display: true},
+       {left: "\\begin{gather*}", right: "\\end{gather*}", display: true},
+       {left: "\\begin{CD}", right: "\\end{CD}", display: true},
+
+       {left: "\\begin{alignedat}", right: "\\end{alignedat}", display: true},
+       {left: "\\begin{aligned}", right: "\\end{aligned}", display: true},
+       {left: "\\begin{gathered}", right: "\\end{gathered}", display: true},
+
+       {left: "\\begin{darray}", right: "\\end{darray}", display: true},
+       {left: "\\begin{dcases}", right: "\\end{dcases}", display: true},
+       {left: "\\begin{drcases}", right: "\\end{drcases}", display: true},
+
+
+       {left: "\\[", right: "\\]", display: true}
+     ],
+     
+     throwOnError : false
+   });
+ });
+</script>
+
+
+
+<script defer id="pseudocodejs" src="/js/pseudocode.min.js"></script>
+
+<script>
+ pseudocodejs.addEventListener('load', function() {
+   pseudocode.renderClass("pseudocode", {
+     lineNumber: true,
+     lineNumberPunc: ':',
+     scopeLines: true,
+     commentDelimiter: '▹ ',
+     noEnd: true,
+   });
+ });
+</script>
+
+
+
+
+        
+        <style type="text/css" media="screen">
+         @media (prefers-color-scheme: dark) {
+           /* Background */ .bg { color: #ebdbb2; background-color: #282828; }
+/* PreWrapper */ .chroma { color: #ebdbb2; background-color: #282828; }
+/* Other */ .chroma .x {  }
+/* Error */ .chroma .err {  }
+/* CodeLine */ .chroma .cl {  }
+/* LineLink */ .chroma .lnlinks { outline: none; text-decoration: none; color: inherit }
+/* LineTableTD */ .chroma .lntd { vertical-align: top; padding: 0; margin: 0; border: 0; }
+/* LineTable */ .chroma .lntable { border-spacing: 0; padding: 0; margin: 0; border: 0; }
+/* LineHighlight */ .chroma .hl { background-color: #ffffcc }
+/* LineNumbersTable */ .chroma .lnt { white-space: pre; -webkit-user-select: none; user-select: none; margin-right: 0.4em; padding: 0 0.4em 0 0.4em;color: #756d59 }
+/* LineNumbers */ .chroma .ln { white-space: pre; -webkit-user-select: none; user-select: none; margin-right: 0.4em; padding: 0 0.4em 0 0.4em;color: #756d59 }
+/* Line */ .chroma .line { display: flex; }
+/* Keyword */ .chroma .k { color: #fe8019 }
+/* KeywordConstant */ .chroma .kc { color: #fe8019 }
+/* KeywordDeclaration */ .chroma .kd { color: #fe8019 }
+/* KeywordNamespace */ .chroma .kn { color: #fe8019 }
+/* KeywordPseudo */ .chroma .kp { color: #fe8019 }
+/* KeywordReserved */ .chroma .kr { color: #fe8019 }
+/* KeywordType */ .chroma .kt { color: #fabd2f }
+/* Name */ .chroma .n {  }
+/* NameAttribute */ .chroma .na { color: #b8bb26; font-weight: bold }
+/* NameBuiltin */ .chroma .nb { color: #fabd2f }
+/* NameBuiltinPseudo */ .chroma .bp {  }
+/* NameClass */ .chroma .nc {  }
+/* NameConstant */ .chroma .no { color: #d3869b }
+/* NameDecorator */ .chroma .nd {  }
+/* NameEntity */ .chroma .ni { color: #fabd2f }
+/* NameException */ .chroma .ne { color: #fb4934 }
+/* NameFunction */ .chroma .nf { color: #fabd2f }
+/* NameFunctionMagic */ .chroma .fm {  }
+/* NameLabel */ .chroma .nl { color: #fb4934 }
+/* NameNamespace */ .chroma .nn {  }
+/* NameOther */ .chroma .nx {  }
+/* NameProperty */ .chroma .py {  }
+/* NameTag */ .chroma .nt { color: #fb4934 }
+/* NameVariable */ .chroma .nv {  }
+/* NameVariableClass */ .chroma .vc {  }
+/* NameVariableGlobal */ .chroma .vg {  }
+/* NameVariableInstance */ .chroma .vi {  }
+/* NameVariableMagic */ .chroma .vm {  }
+/* Literal */ .chroma .l {  }
+/* LiteralDate */ .chroma .ld {  }
+/* LiteralString */ .chroma .s { color: #b8bb26 }
+/* LiteralStringAffix */ .chroma .sa { color: #b8bb26 }
+/* LiteralStringBacktick */ .chroma .sb { color: #b8bb26 }
+/* LiteralStringChar */ .chroma .sc { color: #b8bb26 }
+/* LiteralStringDelimiter */ .chroma .dl { color: #b8bb26 }
+/* LiteralStringDoc */ .chroma .sd { color: #b8bb26 }
+/* LiteralStringDouble */ .chroma .s2 { color: #b8bb26 }
+/* LiteralStringEscape */ .chroma .se { color: #b8bb26 }
+/* LiteralStringHeredoc */ .chroma .sh { color: #b8bb26 }
+/* LiteralStringInterpol */ .chroma .si { color: #b8bb26 }
+/* LiteralStringOther */ .chroma .sx { color: #b8bb26 }
+/* LiteralStringRegex */ .chroma .sr { color: #b8bb26 }
+/* LiteralStringSingle */ .chroma .s1 { color: #b8bb26 }
+/* LiteralStringSymbol */ .chroma .ss { color: #83a598 }
+/* LiteralNumber */ .chroma .m { color: #d3869b }
+/* LiteralNumberBin */ .chroma .mb { color: #d3869b }
+/* LiteralNumberFloat */ .chroma .mf { color: #d3869b }
+/* LiteralNumberHex */ .chroma .mh { color: #d3869b }
+/* LiteralNumberInteger */ .chroma .mi { color: #d3869b }
+/* LiteralNumberIntegerLong */ .chroma .il { color: #d3869b }
+/* LiteralNumberOct */ .chroma .mo { color: #d3869b }
+/* Operator */ .chroma .o { color: #fe8019 }
+/* OperatorWord */ .chroma .ow { color: #fe8019 }
+/* Punctuation */ .chroma .p {  }
+/* Comment */ .chroma .c { color: #928374; font-style: italic }
+/* CommentHashbang */ .chroma .ch { color: #928374; font-style: italic }
+/* CommentMultiline */ .chroma .cm { color: #928374; font-style: italic }
+/* CommentSingle */ .chroma .c1 { color: #928374; font-style: italic }
+/* CommentSpecial */ .chroma .cs { color: #928374; font-style: italic }
+/* CommentPreproc */ .chroma .cp { color: #8ec07c }
+/* CommentPreprocFile */ .chroma .cpf { color: #8ec07c; font-style: italic }
+/* Generic */ .chroma .g {  }
+/* GenericDeleted */ .chroma .gd { color: #282828; background-color: #fb4934 }
+/* GenericEmph */ .chroma .ge { color: #83a598; text-decoration: underline }
+/* GenericError */ .chroma .gr { background-color: #fb4934; font-weight: bold }
+/* GenericHeading */ .chroma .gh { color: #b8bb26; font-weight: bold }
+/* GenericInserted */ .chroma .gi { color: #282828; background-color: #b8bb26 }
+/* GenericOutput */ .chroma .go { color: #504945 }
+/* GenericPrompt */ .chroma .gp {  }
+/* GenericStrong */ .chroma .gs {  }
+/* GenericSubheading */ .chroma .gu { color: #b8bb26; font-weight: bold }
+/* GenericTraceback */ .chroma .gt { background-color: #fb4934; font-weight: bold }
+/* GenericUnderline */ .chroma .gl {  }
+/* TextWhitespace */ .chroma .w {  }
+
+         }
+         @media (prefers-color-scheme: light) {
+           /* Background */ .bg { background-color: #f8f8f8; }
+/* PreWrapper */ .chroma { background-color: #f8f8f8; }
+/* Other */ .chroma .x { color: #000000 }
+/* Error */ .chroma .err { color: #a40000 }
+/* CodeLine */ .chroma .cl {  }
+/* LineLink */ .chroma .lnlinks { outline: none; text-decoration: none; color: inherit }
+/* LineTableTD */ .chroma .lntd { vertical-align: top; padding: 0; margin: 0; border: 0; }
+/* LineTable */ .chroma .lntable { border-spacing: 0; padding: 0; margin: 0; border: 0; }
+/* LineHighlight */ .chroma .hl { background-color: #ffffcc }
+/* LineNumbersTable */ .chroma .lnt { white-space: pre; -webkit-user-select: none; user-select: none; margin-right: 0.4em; padding: 0 0.4em 0 0.4em;color: #7f7f7f }
+/* LineNumbers */ .chroma .ln { white-space: pre; -webkit-user-select: none; user-select: none; margin-right: 0.4em; padding: 0 0.4em 0 0.4em;color: #7f7f7f }
+/* Line */ .chroma .line { display: flex; }
+/* Keyword */ .chroma .k { color: #204a87; font-weight: bold }
+/* KeywordConstant */ .chroma .kc { color: #204a87; font-weight: bold }
+/* KeywordDeclaration */ .chroma .kd { color: #204a87; font-weight: bold }
+/* KeywordNamespace */ .chroma .kn { color: #204a87; font-weight: bold }
+/* KeywordPseudo */ .chroma .kp { color: #204a87; font-weight: bold }
+/* KeywordReserved */ .chroma .kr { color: #204a87; font-weight: bold }
+/* KeywordType */ .chroma .kt { color: #204a87; font-weight: bold }
+/* Name */ .chroma .n { color: #000000 }
+/* NameAttribute */ .chroma .na { color: #c4a000 }
+/* NameBuiltin */ .chroma .nb { color: #204a87 }
+/* NameBuiltinPseudo */ .chroma .bp { color: #3465a4 }
+/* NameClass */ .chroma .nc { color: #000000 }
+/* NameConstant */ .chroma .no { color: #000000 }
+/* NameDecorator */ .chroma .nd { color: #5c35cc; font-weight: bold }
+/* NameEntity */ .chroma .ni { color: #ce5c00 }
+/* NameException */ .chroma .ne { color: #cc0000; font-weight: bold }
+/* NameFunction */ .chroma .nf { color: #000000 }
+/* NameFunctionMagic */ .chroma .fm { color: #000000 }
+/* NameLabel */ .chroma .nl { color: #f57900 }
+/* NameNamespace */ .chroma .nn { color: #000000 }
+/* NameOther */ .chroma .nx { color: #000000 }
+/* NameProperty */ .chroma .py { color: #000000 }
+/* NameTag */ .chroma .nt { color: #204a87; font-weight: bold }
+/* NameVariable */ .chroma .nv { color: #000000 }
+/* NameVariableClass */ .chroma .vc { color: #000000 }
+/* NameVariableGlobal */ .chroma .vg { color: #000000 }
+/* NameVariableInstance */ .chroma .vi { color: #000000 }
+/* NameVariableMagic */ .chroma .vm { color: #000000 }
+/* Literal */ .chroma .l { color: #000000 }
+/* LiteralDate */ .chroma .ld { color: #000000 }
+/* LiteralString */ .chroma .s { color: #4e9a06 }
+/* LiteralStringAffix */ .chroma .sa { color: #4e9a06 }
+/* LiteralStringBacktick */ .chroma .sb { color: #4e9a06 }
+/* LiteralStringChar */ .chroma .sc { color: #4e9a06 }
+/* LiteralStringDelimiter */ .chroma .dl { color: #4e9a06 }
+/* LiteralStringDoc */ .chroma .sd { color: #8f5902; font-style: italic }
+/* LiteralStringDouble */ .chroma .s2 { color: #4e9a06 }
+/* LiteralStringEscape */ .chroma .se { color: #4e9a06 }
+/* LiteralStringHeredoc */ .chroma .sh { color: #4e9a06 }
+/* LiteralStringInterpol */ .chroma .si { color: #4e9a06 }
+/* LiteralStringOther */ .chroma .sx { color: #4e9a06 }
+/* LiteralStringRegex */ .chroma .sr { color: #4e9a06 }
+/* LiteralStringSingle */ .chroma .s1 { color: #4e9a06 }
+/* LiteralStringSymbol */ .chroma .ss { color: #4e9a06 }
+/* LiteralNumber */ .chroma .m { color: #0000cf; font-weight: bold }
+/* LiteralNumberBin */ .chroma .mb { color: #0000cf; font-weight: bold }
+/* LiteralNumberFloat */ .chroma .mf { color: #0000cf; font-weight: bold }
+/* LiteralNumberHex */ .chroma .mh { color: #0000cf; font-weight: bold }
+/* LiteralNumberInteger */ .chroma .mi { color: #0000cf; font-weight: bold }
+/* LiteralNumberIntegerLong */ .chroma .il { color: #0000cf; font-weight: bold }
+/* LiteralNumberOct */ .chroma .mo { color: #0000cf; font-weight: bold }
+/* Operator */ .chroma .o { color: #ce5c00; font-weight: bold }
+/* OperatorWord */ .chroma .ow { color: #204a87; font-weight: bold }
+/* Punctuation */ .chroma .p { color: #000000; font-weight: bold }
+/* Comment */ .chroma .c { color: #8f5902; font-style: italic }
+/* CommentHashbang */ .chroma .ch { color: #8f5902; font-style: italic }
+/* CommentMultiline */ .chroma .cm { color: #8f5902; font-style: italic }
+/* CommentSingle */ .chroma .c1 { color: #8f5902; font-style: italic }
+/* CommentSpecial */ .chroma .cs { color: #8f5902; font-style: italic }
+/* CommentPreproc */ .chroma .cp { color: #8f5902; font-style: italic }
+/* CommentPreprocFile */ .chroma .cpf { color: #8f5902; font-style: italic }
+/* Generic */ .chroma .g { color: #000000 }
+/* GenericDeleted */ .chroma .gd { color: #a40000 }
+/* GenericEmph */ .chroma .ge { color: #000000; font-style: italic }
+/* GenericError */ .chroma .gr { color: #ef2929 }
+/* GenericHeading */ .chroma .gh { color: #000080; font-weight: bold }
+/* GenericInserted */ .chroma .gi { color: #00a000 }
+/* GenericOutput */ .chroma .go { color: #000000; font-style: italic }
+/* GenericPrompt */ .chroma .gp { color: #8f5902 }
+/* GenericStrong */ .chroma .gs { color: #000000; font-weight: bold }
+/* GenericSubheading */ .chroma .gu { color: #800080; font-weight: bold }
+/* GenericTraceback */ .chroma .gt { color: #a40000; font-weight: bold }
+/* GenericUnderline */ .chroma .gl { color: #000000; text-decoration: underline }
+/* TextWhitespace */ .chroma .w { color: #f8f8f8; text-decoration: underline }
+
+         }
+        </style>
+      </div>
+
+      
+      
+      
+      <div class="
+              col-lg-2 col-lg-offset-0
+              visible-lg-block
+              sidebar-container
+              catalog-container">
+        <div class="side-catalog">
+          <hr class="hidden-sm hidden-xs">
+          <h5>
+            <a class="catalog-toggle" href="#">CATALOG</a>
+          </h5>
+          <ul class="catalog-body"></ul>
+        </div>
+      </div>
+      
+    </div>
+  </div>
+</article>
+
+
+
+  
+<footer>
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+        
+        <ul class="list-inline text-center"></ul>
+
+        <p class="copyright text-muted">
+          Copyright &copy; EVER BLOG 2025
+        | Powered by <a href="https://gohugo.io">Hugo</a>
+        | Made with <a href="https://www.gnu.org/software/emacs/">Emacs</a>
+        </p>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script src=/js/jquery.min.js></script>
+<script src=/js/bootstrap.min.js crossorigin="anonymous"></script>
+
+
+
+<script src="/js/hux-blog.min.28f830ee5bc6c824004522fbf7b693d47b1e37a280f3ed6a74f7deec27a1535a.js"></script>
+
+
+<script src=/js/simple-jekyll-search.min.js></script>
+
+
+<script src="/js/search.min.53bce5da475b4d362500e5ce5dddfa22e20e1b9018777411d2020b4b839c9310.js"></script>
+
+
+
+
+
+
+<script type="text/javascript">
+  function generateCatalog(selector) {
+    _containerSelector = 'div.post-container'
+    
+    var P = $(_containerSelector), a, n, t, l, i, c;
+    a = P.find('h1,h2,h3,h4');
+    
+    $(selector).html('')
+    
+    a.each(function () {
+      n = $(this).prop('tagName').toLowerCase();
+      i = "#" + $(this).prop('id');
+      t = $(this).text();
+      c = $('<a href="' + i + '" rel="nofollow">' + t + '</a>');
+      l = $('<li class="' + n + '_nav"></li>').append(c);
+      $(selector).append(l);
+    });
+    return true;
+  }
+
+  generateCatalog(".catalog-body");
+
+  
+  $(".catalog-toggle").click((function (e) {
+    e.preventDefault();
+    $('.side-catalog').toggleClass("fold")
+  }))
+</script>
+
+
+<script type="text/javascript" src='/js/jquery.nav.min.9044d87de16925b06c5879d1310bb3888e0404fa68f2af99fad8fe6292bf6f9c.js'></script>
+<script>
+ $(document).ready( function () {
+   $('.catalog-body').onePageNav({
+     currentClass: "active",
+     changeHash: !1,
+     easing: "swing",
+     filter: "",
+     scrollSpeed: 800,
+     scrollOffset: 0,
+     scrollThreshold: .2,
+     begin: null,
+     end: null,
+     scrollChange: null,
+     padding: 80
+   });
+ });
+</script>
+
+
+
+
+
+
+
+
+
+
+<script src="/zoomjs/zoom.min.js"></script>
+
+
+<script>
+ $("div.definition").wrap("<div class='math_block'></div>");
+ $("div.sample").wrap("<div class='math_block'></div>");
+
+ let proof_env = ["theorem", "lemma", "corollary", "proposition", "fact"];
+ proof_env.forEach(function(env) {
+   $('div.' + env + ' + div.proof').each(function() {
+     $(this).prev('div.' + env).addBack().wrapAll('<div class="math_block"></div>');
+   });
+
+   $('div.' + env).not(':has(+div.proof)').wrap('<div class="math_block"></div>');
+ });
+
+ $('div.proof').each(function() {
+   var $prevDiv = $(this).prev();
+
+   if (!proof_env.some(className => $prevDiv.hasClass(className))) {
+     $(this).wrapAll('<div class="math_block"></div>');
+   }
+ });
+
+ $('div.question + div.answer').each(function() {
+   $(this).prev('div.question').addBack().wrapAll('<div class="math_block"></div>');
+ });
+
+ $('div.question').not(':has(+div.answer)').wrap('<div class="math_block"></div>');
+
+ $('div.note').wrap('<div class="math_block"></div>');
+</script>
+
+</body>
+
+</html></html>
