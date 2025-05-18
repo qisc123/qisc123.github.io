@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-cn">
 
-<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
+<head>
   <meta charset="utf-8">
   <meta http-equiv="x-ua-compatible" content="ie=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
@@ -26,7 +26,7 @@ entry:
   <meta name="twitter:title" content="LLVM IR Part2">
   <meta name="twitter:description" content="Functiondefine i32 @sum(i32 %a, i32 %b) #0 { entry: %add = add nsw i32 %b, %a ret i32 %add } 这个函数返回一个i32类型的值，有两个i32参数，%a和%b.函数声明中的标签#0映射到一组函数属性，这也非常类似于C/C&#43;&#43;的函数和方法所用的属性。nsw标记指定这个加法操作是“no signed wrap”的，表示该操作是已知不会溢出的，允许作某些优化。在文件的末尾定义了一组属性：">
 
-  <meta property="og:url" content="http://localhost:1313/posts/2025/01/llvm-ir-part2/">
+  <meta property="og:url" content="https://qisc123.github.io/posts/2025/01/llvm-ir-part2/">
   <meta property="og:site_name" content="EVER BLOG">
   <meta property="og:title" content="LLVM IR Part2">
   <meta property="og:description" content="Functiondefine i32 @sum(i32 %a, i32 %b) #0 { entry: %add = add nsw i32 %b, %a ret i32 %add } 这个函数返回一个i32类型的值，有两个i32参数，%a和%b.函数声明中的标签#0映射到一组函数属性，这也非常类似于C/C&#43;&#43;的函数和方法所用的属性。nsw标记指定这个加法操作是“no signed wrap”的，表示该操作是已知不会溢出的，允许作某些优化。在文件的末尾定义了一组属性：">
@@ -71,7 +71,7 @@ entry:
         <span class="icon-bar"></span>
         <span class="icon-bar"></span>
       </button>
-      <a class="navbar-brand" href="http://localhost:1313/">EVER BLOG</a>
+      <a class="navbar-brand" href="https://qisc123.github.io/">EVER BLOG</a>
     </div>
     
     <div id="huxblog_navbar">
@@ -785,6 +785,8 @@ Functor 加 自由变量即堆上变量。将一个堆上变量作为参数,传�
    });
  });
 </script>
+
+
 
 
 

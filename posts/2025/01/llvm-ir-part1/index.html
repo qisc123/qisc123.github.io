@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-cn">
 
-<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
+<head>
   <meta charset="utf-8">
   <meta http-equiv="x-ua-compatible" content="ie=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
@@ -23,7 +23,7 @@
   <meta name="twitter:title" content="LLVM-IR Part1">
   <meta name="twitter:description" content="OverviewLLVM中间表示（IR）是连接前端和后端的中枢，让LLVM能够解析多种源语言，为多种目标生成代码。前端产生IR，而后端接收IR。IR也是大部分LLVM目标无关的优化发生的地方。 它采用静态单赋值（SSA）形式。注意没有一个值是被重复赋值的；每个值只有单一赋值定义了它。每次使用一个值，可以立刻向后追溯到给出其定义的唯一的指令。这可以极大地简化优化，因为SSA形式建立了平凡的use-def链，也就是一个值到达使用之处的定义的列表。如果LLVM不采用SSA形式，我们将需要单独运行一次数据流分析，以计算use-def链，对于经典的优化，这是必不可少的，例如常量传播和公共子表达式消除。 以三地址指令组织代码。数据处理指令有两个源操作数，和目标操作数以存放结果。它有无限数量的寄存器。注意LLVM局部值可以命名为任意以%符号开头的名字，包括从0开始的数字，例如%0，%1，等等，不限制不同的值的最大数量。">
 
-  <meta property="og:url" content="http://localhost:1313/posts/2025/01/llvm-ir-part1/">
+  <meta property="og:url" content="https://qisc123.github.io/posts/2025/01/llvm-ir-part1/">
   <meta property="og:site_name" content="EVER BLOG">
   <meta property="og:title" content="LLVM-IR Part1">
   <meta property="og:description" content="OverviewLLVM中间表示（IR）是连接前端和后端的中枢，让LLVM能够解析多种源语言，为多种目标生成代码。前端产生IR，而后端接收IR。IR也是大部分LLVM目标无关的优化发生的地方。 它采用静态单赋值（SSA）形式。注意没有一个值是被重复赋值的；每个值只有单一赋值定义了它。每次使用一个值，可以立刻向后追溯到给出其定义的唯一的指令。这可以极大地简化优化，因为SSA形式建立了平凡的use-def链，也就是一个值到达使用之处的定义的列表。如果LLVM不采用SSA形式，我们将需要单独运行一次数据流分析，以计算use-def链，对于经典的优化，这是必不可少的，例如常量传播和公共子表达式消除。 以三地址指令组织代码。数据处理指令有两个源操作数，和目标操作数以存放结果。它有无限数量的寄存器。注意LLVM局部值可以命名为任意以%符号开头的名字，包括从0开始的数字，例如%0，%1，等等，不限制不同的值的最大数量。">
@@ -68,7 +68,7 @@
         <span class="icon-bar"></span>
         <span class="icon-bar"></span>
       </button>
-      <a class="navbar-brand" href="http://localhost:1313/">EVER BLOG</a>
+      <a class="navbar-brand" href="https://qisc123.github.io/">EVER BLOG</a>
     </div>
     
     <div id="huxblog_navbar">
@@ -836,6 +836,8 @@ on Wed, Jan 8, 2025
    });
  });
 </script>
+
+
 
 
 

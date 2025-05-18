@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-cn">
 
-<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
+<head>
   <meta charset="utf-8">
   <meta http-equiv="x-ua-compatible" content="ie=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
@@ -26,7 +26,7 @@
   <meta name="twitter:title" content="Llvm Backend">
   <meta name="twitter:description" content="后端概述 将LLVM IR转换为目标汇编代码需要经历若干步骤。IR被变换为后端友好的指令、函数、全局变量的表示。这种表示随着程序经历各种后端阶段而变化，越来越接近实际的目标指令。上图给出了必需的步骤的概观，从LLVM IR到目标代码或者汇编。 白色框：非必需的优化Pass以进一步改进翻译的质量。 浅灰色的中间框：它们在内部也称为super pass，因为它们由若干小的Pass实现。它们和白色框的区别在于，前者这些Pass对后端的成功很关键，而后者对于提高所生成的代码的效率更重要。">
 
-  <meta property="og:url" content="http://localhost:1313/posts/2024/04/llvm-backend/">
+  <meta property="og:url" content="https://qisc123.github.io/posts/2024/04/llvm-backend/">
   <meta property="og:site_name" content="EVER BLOG">
   <meta property="og:title" content="Llvm Backend">
   <meta property="og:description" content="后端概述 将LLVM IR转换为目标汇编代码需要经历若干步骤。IR被变换为后端友好的指令、函数、全局变量的表示。这种表示随着程序经历各种后端阶段而变化，越来越接近实际的目标指令。上图给出了必需的步骤的概观，从LLVM IR到目标代码或者汇编。 白色框：非必需的优化Pass以进一步改进翻译的质量。 浅灰色的中间框：它们在内部也称为super pass，因为它们由若干小的Pass实现。它们和白色框的区别在于，前者这些Pass对后端的成功很关键，而后者对于提高所生成的代码的效率更重要。">
@@ -72,7 +72,7 @@
         <span class="icon-bar"></span>
         <span class="icon-bar"></span>
       </button>
-      <a class="navbar-brand" href="http://localhost:1313/">EVER BLOG</a>
+      <a class="navbar-brand" href="https://qisc123.github.io/">EVER BLOG</a>
     </div>
     
     <div id="huxblog_navbar">
@@ -654,6 +654,8 @@ on Wed, Apr 24, 2024
    });
  });
 </script>
+
+
 
 
 

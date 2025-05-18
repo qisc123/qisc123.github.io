@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-cn">
 
-<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
+<head>
   <meta charset="utf-8">
   <meta http-equiv="x-ua-compatible" content="ie=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
@@ -34,7 +34,7 @@
   <meta name="twitter:title" content="Computer Architecture Part2">
   <meta name="twitter:description" content="流水线（Pipeline）将单条指令拆分成多个阶段执行后，当其执行到后一个阶段时，前一个阶段的硬件处于空闲状态，此时再发射一条指令从而复用硬件，就像工业流水线生产一样。 更多并发 → 更高的指令吞吐量 停顿（Stall）：流水线停止前进的情况停顿 = 指令等待其源操作数可用 停止所有上游阶段 清空所有下游阶段 禁用 PC 和 IF/ID 锁存器；确保停顿的指令保持在其当前阶段，在停顿指令之后的流水线阶段插入“无效”指令或空操作（称为“气泡”）。">
 
-  <meta property="og:url" content="http://localhost:1313/posts/2024/12/computer-architecture-part2/">
+  <meta property="og:url" content="https://qisc123.github.io/posts/2024/12/computer-architecture-part2/">
   <meta property="og:site_name" content="EVER BLOG">
   <meta property="og:title" content="Computer Architecture Part2">
   <meta property="og:description" content="流水线（Pipeline）将单条指令拆分成多个阶段执行后，当其执行到后一个阶段时，前一个阶段的硬件处于空闲状态，此时再发射一条指令从而复用硬件，就像工业流水线生产一样。 更多并发 → 更高的指令吞吐量 停顿（Stall）：流水线停止前进的情况停顿 = 指令等待其源操作数可用 停止所有上游阶段 清空所有下游阶段 禁用 PC 和 IF/ID 锁存器；确保停顿的指令保持在其当前阶段，在停顿指令之后的流水线阶段插入“无效”指令或空操作（称为“气泡”）。">
@@ -80,7 +80,7 @@
         <span class="icon-bar"></span>
         <span class="icon-bar"></span>
       </button>
-      <a class="navbar-brand" href="http://localhost:1313/">EVER BLOG</a>
+      <a class="navbar-brand" href="https://qisc123.github.io/">EVER BLOG</a>
     </div>
     
     <div id="huxblog_navbar">
@@ -878,6 +878,8 @@ ROB 是一个硬件结构，记录所有译码但尚未提交的指令信息 <br
    });
  });
 </script>
+
+
 
 
 
