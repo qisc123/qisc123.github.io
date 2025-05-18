@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-cn">
 
-<head>
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
   <meta charset="utf-8">
   <meta http-equiv="x-ua-compatible" content="ie=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
@@ -37,7 +37,7 @@ B \(\rightarrow\) #
   <meta property="og:type" content="article">
     <meta property="article:section" content="posts">
     <meta property="article:published_time" content="2024-05-03T00:00:00+08:00">
-    <meta property="article:modified_time" content="2025-05-08T16:03:39+08:00">
+    <meta property="article:modified_time" content="2025-05-17T16:24:07+08:00">
     <meta property="article:tag" content="词法分析">
     <meta property="article:tag" content="上下文无关语法">
 
@@ -263,7 +263,7 @@ A⇒0A1⇒00A11⇒000A111⇒000B111⇒000#111 <br/>
 <p>设u，v和w是由变元及终结符构成的字符串，A→w是文法的一条规则，称uAv生成(yield) uvw，记作uAv⇒uwv。 <br/>
 如果u=v，或者存在序列u1，u2，⋯，uk，使得 <br/>
 u⇒ u1 ⇒u2 ⇒&hellip;⇒uk ⇒v <br/>
-其中k≥0，则称u派生v，记作\(u \Rightarrow^*v \)。该文法的语言是 \(\{ w \in \Sigma^* \mid S \Rightarrow^* w \}\)。 <br/>
+其中k≥0，则称u派生v，记作\(u \overset{*}{\Rightarrow}v \)。该文法的语言是 \(\{ w \in \Sigma^* \mid S \overset{*}{\Rightarrow} w \}\)。 <br/>
 在文法G<sub>1</sub>中，V = {A, B}, Σ = {0, 1, #}, S = A, 而R是上面提到的示例中给出的3条规则。 <br/>
 在描述一个文法时，通常只写出它的规则。出现在规则左边的所有符号都是变元，其余的符号都是终结符，按照惯例，起始变元是第一条规则左边的变元。 <br/></p>
 </div>
@@ -302,17 +302,212 @@ u⇒ u1 ⇒u2 ⇒&hellip;⇒uk ⇒v <br/>
 </ul>
 </li>
 </ul>
-<h3 id="first集">First集<a class="anchorjs-link" href="#first%e9%9b%86"></a></h3><p>FIRST(α)为α的开始的终结符的集合。 <br/></p>
-<h3 id="follow集">Follow集<a class="anchorjs-link" href="#follow%e9%9b%86"></a></h3><p>FOLLOW(A)为非终结符A的后跟符号集合。 <br/></p>
+<h3 id="first集">First集<a class="anchorjs-link" href="#first%e9%9b%86"></a></h3><p>\begin{equation*}
+\mathrm{FIRST}(\alpha) =
+\{ a \in \Sigma \mid \alpha \overset{*}{\Rightarrow} a \beta \}
+\cup
+\begin{cases}
+\{\varepsilon\}, &amp; \text{ if } \alpha \overset{*}{\Rightarrow} \varepsilon \\
+\emptyset, &amp; \text{else}
+\end{cases}
+\end{equation*}</p>
+<p>FIRST(α)为α的开始的终结符的集合。 <br/>
+基本算法 <br/></p>
+<ul>
+<li>若\( \alpha \)以终结符a开头，则\( a \in \mathrm{FIRST}(\alpha)\) <br/></li>
+<li>若 \( \alpha \) 以非终结符 \( A \) 开头，则将 \( \mathrm{FIRST}(A)\) 加入 \( \mathrm{FIRST}(\alpha) \)； <br/>
+<ul>
+<li>若 \( \varepsilon \in \mathrm{FIRST}(A) \)，则继续考察 \( A \) 之后的符号， <br/></li>
+<li>否则停止。 <br/></li>
+</ul>
+</li>
+<li>若 \( \alpha \) 的所有符号都能推出 \( \varepsilon \)，则 \( \varepsilon \in \mathrm{FIRST}(\alpha) \)。 <br/></li>
+</ul>
+<h3 id="follow集">Follow集<a class="anchorjs-link" href="#follow%e9%9b%86"></a></h3><p>\begin{equation*}
+\mathrm{FOLLOW}(A) =
+\{ a \in \Sigma \mid S \overset{*}{\Rightarrow} \alpha A a \beta \}
+\cup
+\begin{cases}
+\{\$\}, &amp; \text{ if } S \overset{*}{\Rightarrow} \gamma A \\
+\emptyset, &amp; \text{else}
+\end{cases}
+\end{equation*}</p>
+<p>FOLLOW(A)为非终结符A的后跟符号集合。 <br/></p>
+<ul>
+<li>若 \( A \) 是开始符号，则将 \(\$ \)（即输入的结束符号）加入 \( \mathrm{FOLLOW}(A) \)。 <br/></li>
+<li>若存在产生式 \( B \rightarrow \alpha A \beta \)，则将 \( \mathrm{FIRST}(\beta)  \) 加入 \( \mathrm{FOLLOW}(A) \)。 <br/>
+<ul>
+<li>若\( \varepsilon \in \mathrm{FIRST}(\beta) \)，或 \( B \rightarrow \alpha A \)（即 \( A \) 是末尾符号），则将 \( \mathrm{FOLLOW}(B) \) 加入 \( \mathrm{FOLLOW}(A) \)。 <br/></li>
+</ul>
+</li>
+<li>重复直到各\( \mathrm{FOLLOW} \)集合不再变化为止。 <br/></li>
+</ul>
 <h3 id="自顶向下">自顶向下<a class="anchorjs-link" href="#%e8%87%aa%e9%a1%b6%e5%90%91%e4%b8%8b"></a></h3><p>递归向下 LL(k) 从左往右， 从语法树的生成来看是最左推导的。k表示向前看k个字符。 <br/>
 和一般的递归算法一样，如果发生错误，则进行回溯。 <br/>
 优化方法为修改文法，使其能做到唯一的推导，此时自然就没有错误率。 <br/>
-只需要一张预测分析表，递归调用隐式的进行状态管理。 <br/></p>
-<h3 id="自底向上">自底向上<a class="anchorjs-link" href="#%e8%87%aa%e5%ba%95%e5%90%91%e4%b8%8a"></a></h3><p>移入归约 <br/>
-LR(k) 从左往右分析 最右推导 反向的生成语法树,左边终结符从语法树的叶子节点往上归约至根节点，若从时间顺序倒过来看，即自顶向下生成语法树，则是从最右侧的终结符最先生成。 <br/>
-lr(1) LALR(1) SLR(1) LR(0)文法表示的语言，后一个为前一个的子集。 <br/>
-使用项集(item set)形式的下推自动机管理状态。 <br/></p>
-<h3 id="点状规则">点状规则<a class="anchorjs-link" href="#%e7%82%b9%e7%8a%b6%e8%a7%84%e5%88%99"></a></h3>
+需要一张预测分析表，递归调用隐式的进行状态管理。 <br/>
+LL(1)算法： <br/></p>
+<div class="definition">
+<p>\begin{aligned}
+&amp;\text{word} \leftarrow \text{NextWord()} \\
+&amp;\text{push eof onto Stack} \\
+&amp;\text{push the start symbol } S \text{ onto Stack} \\
+&amp;\text{while (true) do} \\
+&amp;\quad \text{focus} \leftarrow \text{top of Stack} \\
+&amp;\quad \text{if (focus = eof and word = eof) then} \\
+&amp;\qquad \text{report success and break from the loop} \\
+&amp;\quad \text{else if (focus} \in T \text{ or focus = eof) then} \\
+&amp;\qquad \text{if (focus matches word) then} \\
+&amp;\qquad\quad \text{pop Stack} \\
+&amp;\qquad\quad \text{word} \leftarrow \text{NextWord()} \\
+&amp;\qquad \text{else report an error looking for the symbol in focus} \\
+&amp;\quad \text{else} \\
+&amp;\qquad \text{// focus is a nonterminal} \\
+&amp;\qquad \text{if Table[focus, word] is } A \rightarrow \beta_1 \beta_2 \ldots \beta_k \text{ then} \\
+&amp;\qquad\quad \text{pop Stack} \\
+&amp;\qquad\quad \text{for } i \leftarrow k \text{ to } 1 \text{ by } -1 \text{ do} \\
+&amp;\qquad\qquad \text{if } \beta_i \ne \varepsilon \text{ then} \\
+&amp;\qquad\qquad\quad \text{push } \beta_i \text{ onto Stack} \\
+&amp;\qquad \text{else report an error expanding focus}
+\end{aligned}</p>
+</div>
+<h3 id="自底向上">自底向上<a class="anchorjs-link" href="#%e8%87%aa%e5%ba%95%e5%90%91%e4%b8%8a"></a></h3><p>LR(k) 从左往右分析 最右推导 反向的生成语法树,左边终结符从语法树的叶子节点往上归约至根节点，若从时间顺序倒过来看，即自顶向下生成语法树，则是从最右侧的终结符最先生成。 <br/>
+LR(1) LALR(1) SLR(1) LR(0)文法表示的语言，后一个为前一个的子集。 <br/></p>
+<h4 id="基本概念">基本概念<a class="anchorjs-link" href="#%e5%9f%ba%e6%9c%ac%e6%a6%82%e5%bf%b5"></a></h4><p>在自底向上的分析器（例如表驱动的 LR (1) 分析器）中，关键步骤是找到下一个 handle（句柄）。高效的句柄发现是实现高效自底向上分析的关键。 <br/>
+LR (1) 分析器使用一个句柄识别自动机，这个自动机被编码在两个表中，传统上称为 Action 表和 Goto 表。 <br/>
+使用项集(item set)形式的下推自动机管理状态。 <br/>
+<figure>
+  <a class="paragraph-image">
+    <img data-src="/imgs/context-free-grammar/lr.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure> <br/>
+该自动机使用移入归约管理状态栈，其包含两个组件：1个栈 ， 1个输入缓冲区 ； <br/>
+主要由4 个操作组成： <br/></p>
+<ul>
+<li>移入：将下一个输入 符号 移入 栈顶 <br/></li>
+<li>规约 ：规约是对栈中的语法符号串进行规约，被规约的串右侧位于栈顶，语法分析器确定串左端 <br/></li>
+<li>接收 ：宣布语法分析过程成功完成 <br/></li>
+<li>报错 ：发现语法错误，执行错误恢复程序。 <br/></li>
+</ul>
+<div class="definition">
+<p>LR(1)语法分析器的基本骨架： <br/></p>
+<p>\begin{aligned}
+&amp;\text{push } \langle \text{INVALID}, \text{INVALID} \rangle \text{ onto the stack} \\
+&amp;\text{push } \langle \text{start symbol}, s_0 \rangle \text{ onto the stack} \\
+&amp;\text{word} \leftarrow \text{NextWord()} \\
+&amp;\text{while (true) do} \\
+&amp;\quad \text{state} \leftarrow \text{state from pair at top of stack} \\
+&amp;\quad \text{if } \text{Action}[\text{state}, \text{word}] = \text{“reduce } A \to \beta” \text{ then} \\
+&amp;\qquad \text{pop } |\beta| \text{ pairs from the stack} \\
+&amp;\qquad \text{state} \leftarrow \text{state from pair at top of stack} \\
+&amp;\qquad \text{push } \langle A, \text{Goto}[\text{state}, A] \rangle \text{ onto the stack} \\
+&amp;\quad \text{else if } \text{Action}[\text{state}, \text{word}] = \text{“shift } s_i” \text{ then} \\
+&amp;\qquad \text{push } \langle \text{word}, s_i \rangle \text{ onto the stack} \\
+&amp;\qquad \text{word} \leftarrow \text{NextWord()} \\
+&amp;\quad \text{else if } \text{Action}[\text{state}, \text{word}] = \text{“accept” and word = eof then} \\
+&amp;\qquad \text{break} \\
+&amp;\quad \text{else} \\
+&amp;\qquad \text{throw a syntax error} \\
+&amp;\text{report success /* executed the “accept” case */}
+\end{aligned}</p>
+<p>这个算法解释 Action 表和 Goto 表，以在输入的逆右推导中找到连续的句柄。当它找到一个句柄〈A → β, k〉时，就将当前句型中位置 k 处的 β 归约为 A，也就是对部分构建的语法树的上层边界进行归约。解析器并不显式地构建语法树，而是把语法树上层边界的前缀保存在一个栈中。栈中的每个元素是一个对〈A, s〉，其中 A 是一个文法符号，s 是一个解析状态。状态串联起归约过程，形成整个解析过程。 <br/>
+变量 word 保存了下一个符号的前瞻符号，也就是栈内容之后的第一个单词。 <br/>
+为了找到下一个句柄，LR (1) 解析器将符号不断地移入栈，直到自动机发现句柄的右端就在栈顶。一旦找到句柄 A → β，解析器就执行归约，用 A 替代 β。解析器从栈中弹出 β 中的符号和对应的状态，然后将 A 和它的新状态压入栈中。Action 和 Goto 表将动作（移进和归约）和状态串联起来，以文法驱动的序列找到一个右推导（如果存在的话）。 <br/></p>
+</div>
+<h4 id="构建自动机">构建自动机<a class="anchorjs-link" href="#%e6%9e%84%e5%bb%ba%e8%87%aa%e5%8a%a8%e6%9c%ba"></a></h4><!--list-separator-->
+<ul>
+<li>
+<p>项集</p>
+ <div class="definition">
+<p>在 LR (1) 解析器中，Action 和 Goto 表编码了每一步解析中句柄和潜在句柄的信息。表构造算法使用 LR (1) 项来表示句柄、潜在句柄以及相关的前瞻符号。 <br/>
+LR (1) 项 ：[𝐴→𝛽•𝛾,𝑎] 包含产生式 𝐴→𝛽𝛾，一个指示栈顶位置的占位符 •，以及一个特定的终结符 a 作为前瞻符号。 <br/></p>
+ </div>
+<p>表构造算法构建 规范集合 𝐶𝐶={𝐶𝐶0,𝐶𝐶1,𝐶𝐶2,&hellip;,𝐶𝐶𝑛}，其中每个 𝐶𝐶𝑖∈𝐶𝐶 代表解析器的一个有效配置或一个解析状态。 <br/>
+它包含一个或多个LR(1)项，这些项代表了与该解析状态相对应的句柄或潜在句柄。 <br/>
+对于产生式 𝐴→𝛽𝛾A→βγ 和前瞻符号 a，占位符 • 可能有三种不同的位置，每种对应不同的解释。若某个 𝐶𝐶𝑖  中包含该项，则表示解析器已看到的输入与文法中出现 A 后跟 a 是一致的。• 的位置区分了以下三种情况： <br/></p>
+<ul>
+<li>[A→•βγ,a] 表示 A 是有效的，下一个识别的步骤是 β，这一步是发现 A 的一部分。我们称此项为 可能项；它表示对已看到输入的可能完成。 <br/></li>
+<li>[A→β•γ,a] 表示解析器已经从状态 [𝐴→•𝛽𝛾,𝑎] 进展到识别了 β。下一步的有效操作是识别 γ。我们称此项为 部分完成项。 <br/></li>
+<li>[A→βγ•,a] 表示解析器已经识别了 βγ，且在一个 A 后面跟着 a 的有效上下文中。如果前瞻符号是 a，那么该项是一个句柄，解析器可以将 βγ 归约为 A。我们称此项为 完成项。 <br/></li>
+</ul>
+</li>
+</ul>
+<!--list-separator-->
+<ul>
+<li>
+<p>closure and goto</p>
+<p>为了构造 LR (1) 项的规范集合 CC，解析器生成器从解析器的初始状态开始， <br/>
+即[Goal→•List,eof] <br/>
+并构建一个所有潜在状态转移的模型。该算法将解析器的每个可能配置（或状态）表示为一组 LR (1) 项。 <br/>
+算法对这些 LR (1) 项集执行两个操作：闭包（closure）和转移（transition）。 <br/></p>
+<ul>
+<li>闭包函数（closure） 完善一个状态；给定一组核心项，它会将该组隐含的相关 LR (1) 项全部加入集合中。例如，在任何允许 Goal→List 的地方，产生 𝐿𝑖𝑠𝑡 的产生式也是合法的。因此，项 [Goal→•List,eof] 同时隐含了[List→•List Pair,eof] 和 [List→•Pair,eof] 这两个项。闭包操作找到所有此类项并将它们加入当前状态。 <br/></li>
+<li>转移函数（goto） 模拟从某状态 𝑠 出发，读取文法符号 𝑥 后的状态转移效果。算法检查状态 𝑠 中的 LR (1) 项，找到所有 “•” 位置紧挨着 𝑥 的项，将 “•” 移动到 𝑥 之后，把新的项放入 goto 返回的新状态集合中。最后，对新状态再执行闭包操作以完成状态。 <br/></li>
+</ul>
+<p>为了方便找到起始符号，我们要求文法有唯一的起始符号，且该符号不出现在任何产生式的右侧。在这个括号文法中，该符号是 Goal。 <br/></p>
+ <div class="definition">
+<p>closure函数 <br/></p>
+<p>\begin{aligned}
+&amp;\text{closure}(s) \\
+&amp;\text{while } s \text{ is still changing do} \\
+&amp;\quad \text{for each item } [A \to \beta \bullet C \delta, a] \in s \text{ do} \\
+&amp;\qquad \text{lookahead} \leftarrow \delta a \\
+&amp;\qquad \text{for each production } C \to \gamma \in P \text{ do} \\
+&amp;\qquad\quad \text{for each } b \in \text{FIRST}(\text{lookahead}) \text{ do} \\
+&amp;\qquad\qquad s \leftarrow s \cup \{ [C \to \bullet \gamma, b] \} \\
+&amp;\text{return } s
+\end{aligned}</p>
+ </div>
+ <div class="definition">
+<p>goto函数： <br/></p>
+<p>\begin{aligned}
+&amp;\text{goto}(s, x) \\
+&amp;t \leftarrow \emptyset \\
+&amp;\text{for each item } i \in s \text{ do} \\
+&amp;\quad \text{if } i \text{ is } [\alpha \to \beta \bullet x \delta, a] \text{ then} \\
+&amp;\qquad t \leftarrow t \cup \{[\alpha \to \beta x \bullet \delta, a]\} \\
+&amp;\text{return } \text{closure}(t)
+\end{aligned}</p>
+ </div>
+ <div class="definition">
+<p>项集构建算法： <br/></p>
+<p>\begin{aligned}
+&amp;CC_0 \leftarrow \emptyset \\
+&amp;\text{for each production of the form } \text{Goal} \to \alpha \text{ do} \\
+&amp;\quad CC_0 \leftarrow CC_0 \cup \{ [ \text{Goal} \to \bullet \alpha, \text{eof} ] \} \\
+&amp;CC_0 \leftarrow \text{closure}(CC_0) \\
+&amp;CC \leftarrow \{ CC_0 \} \\
+&amp;\text{while (new sets are still being added to } CC) \text{ do} \\
+&amp;\quad \text{for each unmarked set } CC_i \in CC \text{ do} \\
+&amp;\qquad \text{mark } CC_i \text{ as processed} \\
+&amp;\qquad \text{for each } x \text{ following a } \bullet \text{ in an item in } CC_i \text{ do} \\
+&amp;\qquad\quad \text{temp} \leftarrow \text{goto}(CC_i, x) \\
+&amp;\qquad\quad \text{if } \text{temp} \notin CC \text{ then} \\
+&amp;\qquad\qquad CC \leftarrow CC \cup \{\text{temp}\} \\
+&amp;\qquad\qquad \text{record transition from } CC_i \text{ to temp on } x
+\end{aligned}</p>
+ </div>
+</li>
+</ul>
+<h4 id="语法分析表">语法分析表<a class="anchorjs-link" href="#%e8%af%ad%e6%b3%95%e5%88%86%e6%9e%90%e8%a1%a8"></a></h4><div class="definition">
+<p>\begin{aligned}
+&amp;CC_0 \leftarrow \emptyset \\
+&amp;\text{for each production of the form } \text{Goal} \to \alpha \text{ do} \\
+&amp;\quad CC_0 \leftarrow CC_0 \cup \{ [\text{Goal} \to \bullet \alpha, \text{eof}] \} \\
+&amp;CC_0 \leftarrow \text{closure}(CC_0) \\
+&amp;CC \leftarrow \{ CC_0 \} \\
+&amp;\text{while (new sets are still being added to } CC) \text{ do} \\
+&amp;\quad \text{for each unmarked set } CC_i \in CC \text{ do} \\
+&amp;\qquad \text{mark } CC_i \text{ as processed} \\
+&amp;\qquad \text{for each } x \text{ following a } \bullet \text{ in an item in } CC_i \text{ do} \\
+&amp;\qquad\quad \text{temp} \leftarrow \text{goto}(CC_i, x) \\
+&amp;\qquad\quad \text{if } \text{temp} \notin CC \text{ then} \\
+&amp;\qquad\qquad CC \leftarrow CC \cup \{ \text{temp} \} \\
+&amp;\qquad\quad \text{record transition from } CC_i \text{ to temp on } x
+\end{aligned}</p>
+</div>
+
 
         <hr style="visibility: hidden;" />
         <ul class="pager">
@@ -719,8 +914,6 @@ lr(1) LALR(1) SLR(1) LR(0)文法表示的语言，后一个为前一个的子集
    });
  });
 </script>
-
-
 
 
 

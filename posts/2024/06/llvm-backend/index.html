@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
+  <meta charset="utf-8">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+  
+    
+  <title>LLVM Backend | EVER BLOG</title>
+  <meta name="author" content="Ever">
+  <meta name="description" content="后端概述
+
+
+将LLVM IR转换为目标汇编代码需要经历若干步骤。IR被变换为后端友好的指令、函数、全局变量的表示。这种表示随着程序经历各种后端阶段而变化，越来越接近实际的目标指令。上图给出了必需的步骤的概观，从LLVM IR到目标代码或者汇编。
+白色框：非必需的优化Pass以进一步改进翻译的质量。
+浅灰色的中间框：它们在内部也称为super pass，因为它们由若干小的Pass实现。它们和白色框的区别在于，前者这些Pass对后端的成功很关键，而后者对于提高所生成的代码的效率更重要。">
+  <meta name="keywords" content="blog, developer, personal">
+
+  <meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+
+  
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="LLVM Backend">
+  <meta name="twitter:description" content="后端概述 将LLVM IR转换为目标汇编代码需要经历若干步骤。IR被变换为后端友好的指令、函数、全局变量的表示。这种表示随着程序经历各种后端阶段而变化，越来越接近实际的目标指令。上图给出了必需的步骤的概观，从LLVM IR到目标代码或者汇编。 白色框：非必需的优化Pass以进一步改进翻译的质量。 浅灰色的中间框：它们在内部也称为super pass，因为它们由若干小的Pass实现。它们和白色框的区别在于，前者这些Pass对后端的成功很关键，而后者对于提高所生成的代码的效率更重要。">
+
+  <meta property="og:url" content="http://localhost:1313/posts/2024/06/llvm-backend/">
+  <meta property="og:site_name" content="EVER BLOG">
+  <meta property="og:title" content="LLVM Backend">
+  <meta property="og:description" content="后端概述 将LLVM IR转换为目标汇编代码需要经历若干步骤。IR被变换为后端友好的指令、函数、全局变量的表示。这种表示随着程序经历各种后端阶段而变化，越来越接近实际的目标指令。上图给出了必需的步骤的概观，从LLVM IR到目标代码或者汇编。 白色框：非必需的优化Pass以进一步改进翻译的质量。 浅灰色的中间框：它们在内部也称为super pass，因为它们由若干小的Pass实现。它们和白色框的区别在于，前者这些Pass对后端的成功很关键，而后者对于提高所生成的代码的效率更重要。">
+  <meta property="og:locale" content="zh_cn">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2025-05-17T18:02:35+08:00">
+    <meta property="article:modified_time" content="2025-05-17T18:02:35+08:00">
+    <meta property="article:tag" content="Backend">
+    <meta property="article:tag" content="LLVM">
+
+  <link rel="stylesheet" href="/css/bootstrap.min.css"  crossorigin="anonymous">
+  
+  <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.2.1/css/all.min.css" rel="stylesheet" type="text/css">
+
+  <link rel="stylesheet" href="/sass/main.css">
+
+  <link rel="stylesheet" href="/zoomjs/zoom.min.css">
+
+  <script src=/js/lazysizes.min.js></script>
+
+  
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="manifest" href="/site.webmanifest">
+  
+
+</head>
+
+
+
+<body ontouchstart="">
+  
+  
+  <nav class="navbar navbar-default navbar-custom navbar-fixed-top invert">
+  <div class="container-fluid">
+    
+    <div class="navbar-header page-scroll">
+      <button type="button" class="navbar-toggle">
+        <span class="sr-only">Toggle navigation</span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="http://localhost:1313/">EVER BLOG</a>
+    </div>
+    
+    <div id="huxblog_navbar">
+      <div class="navbar-collapse">
+        <ul class="nav navbar-nav navbar-right">
+          
+          <li><a href="/" title="Home">Home</a></li>
+          
+          <li><a href="/series/" title="Series">Series</a></li>
+          
+          <li><a href="/archive/" title="Archive">Archive</a></li>
+          
+          <li><a href="/about/" title="About">About</a></li>
+          
+
+          <li class="search-icon">
+            <a href="javascript:void(0)">
+              <i class="fa fa-search"></i>
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+    
+  </div>
+  
+</nav>
+<script>
+  
+  
+  
+  var $body = document.body;
+  var $toggle = document.querySelector(".navbar-toggle");
+  var $navbar = document.querySelector("#huxblog_navbar");
+  var $collapse = document.querySelector(".navbar-collapse");
+
+  var __HuxNav__ = {
+    close: function () {
+      $navbar.className = " ";
+      
+      setTimeout(function () {
+        
+        if ($navbar.className.indexOf("in") < 0) {
+          $collapse.style.height = "0px";
+        }
+      }, 400);
+    },
+    open: function () {
+      $collapse.style.height = "auto";
+      $navbar.className += " in";
+    },
+  };
+
+  
+  $toggle.addEventListener("click", function (e) {
+    if ($navbar.className.indexOf("in") > 0) {
+      __HuxNav__.close();
+    } else {
+      __HuxNav__.open();
+    }
+  });
+
+  
+
+  document.addEventListener("click", function (e) {
+    if (e.target == $toggle) return;
+    if (e.target.className == "icon-bar") return;
+    __HuxNav__.close();
+  });
+</script>
+  
+<div class="search-page">
+  <div class="search-icon-close-container">
+    <span class="search-icon-close">
+      <i class="fa fa-chevron-down"></i>
+    </span>
+  </div>
+  <div class="search-main container">
+    <div class="row">
+      <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+        <form></form>
+        <input type="text" id="search-input" placeholder="$ grep...">
+        </form>
+        <div id="search-results" class="mini-post-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+  
+
+
+<style type="text/css">
+  header.intro-header {
+    position: relative;
+    background-image: url('');
+  }
+</style>
+
+<header class="intro-header style-text">
+
+  <div class="header-mask"></div>
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-10 col-lg-offset-1 col-md-10 col-md-offset-1">
+        <div class="post-heading">
+          <div class="tags">
+            
+            <a class="tag" href="/tags/backend/" title="Backend">Backend</a>
+            
+            <a class="tag" href="/tags/llvm/" title="LLVM">LLVM</a>
+            
+          </div>
+          <h1>LLVM Backend</h1>
+          <h2 class="subheading"></h2>
+          <span class="meta">
+            Posted by
+
+
+Ever
+
+on Sat, May 17, 2025
+
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+
+
+  
+
+
+<article>
+  <div class="container">
+    <div class="row">
+
+      
+      <div class="
+              col-lg-9 col-lg-offset-1
+              col-md-10 col-md-offset-1
+              post-container">
+        <h2 id="后端">后端<a class="anchorjs-link" href="#%e5%90%8e%e7%ab%af"></a></h2><h3 id="概述">概述<a class="anchorjs-link" href="#%e6%a6%82%e8%bf%b0"></a></h3><figure><img data-src="/imgs/llvm-backend.png"
+         data-action="zoom"
+         class="lazyload"/>
+</figure>
+
+<p>将LLVM IR转换为目标汇编代码需要经历若干步骤。IR被变换为后端友好的指令、函数、全局变量的表示。这种表示随着程序经历各种后端阶段而变化，越来越接近实际的目标指令。上图给出了必需的步骤的概观，从LLVM IR到目标代码或者汇编。
+白色框：非必需的优化Pass以进一步改进翻译的质量。
+浅灰色的中间框：它们在内部也称为super pass，因为它们由若干小的Pass实现。它们和白色框的区别在于，前者这些Pass对后端的成功很关键，而后者对于提高所生成的代码的效率更重要。</p>
+<h4 id="指令选择-instructionselection">指令选择（InstructionSelection）<a class="anchorjs-link" href="#%e6%8c%87%e4%bb%a4%e9%80%89%e6%8b%a9-instructionselection"></a></h4><p>过程将内存中的IR表示变换为目标特定的SelectionDAG节点。起初，这个过程将三地址结构的LLVM IR变换为DAG（Directed Acyclic Graph）形式，这是有向无环图。每个DAG能够表示单一基本块的计算，这意味着每个基本块关联不同的DAG。典型地节点表示指令，而边编码了它们之间的数据流依赖，但不限于此。转换为DAG是重要的，这让LLVM代码生成程序库能够运用基于树的模式匹配指令选择算法，它经过一些调整，也能工作在DAG上（而不仅仅是树）。到这个过程结束时，DAG已将它所有的LLVM IR节点变换为目标机器节点，这些节点表示机器指令而不是LLVM指令。</p>
+<p>指令选择之后，对于使用哪些目标指令执行每个基本块的计算，我们已经有了清楚的概念。这编码在SelectionDAG类中。然而，我们需要返回三地址表示形式，以决定基本块内部的指令顺序，因为DAG并不暗示互不依赖的指令之间的顺序。</p>
+<h4 id="第1次指令调度-instruction-scheduling">第1次指令调度（Instruction Scheduling）<a class="anchorjs-link" href="#%e7%ac%ac1%e6%ac%a1%e6%8c%87%e4%bb%a4%e8%b0%83%e5%ba%a6-instruction-scheduling"></a></h4><p>也称为前寄存器分配（RA）调度，对指令排序，同时尝试发现尽可能多的指令层次的并行。然后这些指令被变换为MachineInstr三地址表示。
+回想一下，LLVM IR的寄存器集是无限的。这个性质一直保持着，直到寄存器分配（Register Allocation）
+它将无限的虚拟寄存器的引用转换为有限的目标特定的寄存器集，寄存器不够时挤出（spill）到内存。</p>
+<h4 id="第2次指令调度">第2次指令调度<a class="anchorjs-link" href="#%e7%ac%ac2%e6%ac%a1%e6%8c%87%e4%bb%a4%e8%b0%83%e5%ba%a6"></a></h4><p>也称为后寄存器分配（RA）调度，在此时发生。因为此时在这个点可获得真实的寄存器信息，某些类型寄存器存在额外的风险和延迟，它们可被用以改进指令顺序。</p>
+<h4 id="代码输出-code-emission">代码输出（Code Emission）<a class="anchorjs-link" href="#%e4%bb%a3%e7%a0%81%e8%be%93%e5%87%ba-code-emission"></a></h4><p>阶段将指令从MachineInstr表示变换为MCInst实例。这种新的表示更适合汇编器和链接器，它有两种选择：输出汇编代码或者输出二进制块（blob）到一种特定的目标代码格式。如此，整个后端流水线用到了四种不同层次的指令表示：内存中的LLVM IR，SelectionDAG节点，MachineInstr，和MCInst。</p>
+<h3 id="llc-后端工具">llc 后端工具<a class="anchorjs-link" href="#llc-%e5%90%8e%e7%ab%af%e5%b7%a5%e5%85%b7"></a></h3><p>llc的工作 生成汇编或可执行代码</p>
+<h4 id="ir具有目标相关性">IR具有目标相关性<a class="anchorjs-link" href="#ir%e5%85%b7%e6%9c%89%e7%9b%ae%e6%a0%87%e7%9b%b8%e5%85%b3%e6%80%a7"></a></h4><p>在第5章（LLVM中间表示）中，我们解释了IR具有目标相关的一面，尽管它是为所有后端设计的共同语言。因为C/C++语言具有目标相关的属性，所以这种相关性会体现在LLVM IR中。</p>
+<!--list-separator-->
+<ul>
+<li>
+<p>一个例子。</p>
+<p>考虑你的程序分配了char指针的一个vector，用以存储不同的字符串，你用通用的C语句malloc(sizeof(char*)*n)来为字符串vector分配内存。如果你在前端时指定了目标，比如32位MIPS架构，它生成的代码会让malloc分配n x 4字节的内存，因为在32位MIPS上每个指针是4字节。然而，如果你用llc编译这个bitcode而强制指定x86_64架构，它将生成坏的程序。在运行时，会发生潜在的分段错误（segmentation fault），因为x86_64架构的每个指针是8字节，这使得malloc分配的内存不足够。在x86_64上正确的malloc调用将分配n x 8字节。</p>
+</li>
+</ul>
+<h3 id="后端代码结构">后端代码结构<a class="anchorjs-link" href="#%e5%90%8e%e7%ab%af%e4%bb%a3%e7%a0%81%e7%bb%93%e6%9e%84"></a></h3><p>代码生成背后的主要程序库位于lib目录和它的子文件夹CodeGen、MC、TableGen、和Target中：
+CodeGen目录包含的文件和头文件实现了所有通用的代码生成算法：指令选择，指令调度，寄存器分配，和所有它们需要的分析。
+MC目录实现了低层次功能，包括汇编器（汇编解析器）、松弛算法（反汇编器）、和特定的目标文件格式如ELF、COFF、Macho等等。
+TableGen目录包含TableGen工具的完整实现，它可以根据.td文件中的高层次的目标描述生成C++代码。
+每个目标的实现在Target的子文件夹中，如Target/Mips，包括若干.cpp、.h、和.td文件。为不同目标实现类似功能的文件倾向于共用类似的名字。</p>
+<h3 id="指令选择">指令选择<a class="anchorjs-link" href="#%e6%8c%87%e4%bb%a4%e9%80%89%e6%8b%a9"></a></h3><h4 id="概述">概述<a class="anchorjs-link" href="#%e6%a6%82%e8%bf%b0"></a></h4><p>指令选择是将LLVM IR转换为代表目标指令的SelectionDAG节点（SDNode）的过程。第一步是根据LLVM IR指令建立DAG，创建SelectionDAG对象，其节点保存IR操作。接着，这些节点经过低层化、DAG结合、和合法化等过程，使它更容易匹配目标指令。然后，指令选择用节点模式匹配方法执行DAG到DAG的变换，将SelectionDAG节点转换为代表目标指令的节点。</p>
+<h4 id="dag图">DAG图<a class="anchorjs-link" href="#dag%e5%9b%be"></a></h4><figure><img data-src="/imgs/CFG.png"
+         data-action="zoom"
+         class="lazyload"/>
+</figure>
+
+<p>DAG的连线（edge）通过use-def关系强制它的操作之间的顺序。如果节点B（例如，add）有一条出去的连线到节点A（例如，Constant&lt;-10&gt;），这意味着节点A定义了一个值（32位整数-10），而节点B使用它（作为加法的一个操作数）。因此，A操作必须在B之前执行。</p>
+<!--list-separator-->
+<ul>
+<li>
+<p>黑色箭头</p>
+<p>表示常规连线，指示数据流依赖，正如例子add。</p>
+</li>
+</ul>
+<!--list-separator-->
+<ul>
+<li>
+<p>虚线蓝色箭头</p>
+<p>表示非数据流链，用以强制两条指令的顺序，否则它们就是不相关的，例如，load和store指令必须固定它们原始的程序顺序，如果它们访问相同的内存位置。在前面的图中，我们知道CopyToReg操作必须在X86ISD::RET_FLAG之前发生，由于虚线蓝色箭头。</p>
+</li>
+</ul>
+<!--list-separator-->
+<ul>
+<li>
+<p>红色连线</p>
+<p>保证它相邻的节点必须粘合在一起，这意味着它们必须紧挨着执行，它们之间不可有其它指令。例如，我们指定相同的节点CopyToReg和X86ISD::RET_FLAG必须安排为紧挨着，由于红色的连线。</p>
+</li>
+</ul>
+<!--list-separator-->
+<ul>
+<li>
+<p>每个节点可以提供一个不同的值类型</p>
+<p>依赖于它和它的使用者的关系。一个值不必是具体的，也可能是一个抽象的标记（token）。它可能有任意如下类型：</p>
+ <!--list-separator-->
+<ul>
+<li>
+<p>节点所提供的值可以是一个具体的值类型</p>
+<p>表示整数、浮点数、向量、或指针。数据处理节点根据它的操作数计算一个新的值，其结果是这种类别的一个例子。类型可以是i32、i64、f32、v2f32（有两个f32元素的向量）、和iPTR等。在LLVM示意图中，当另一个节点使用这个值的时候，生产者-消费者关系是由一条常规的黑色连线描绘的。</p>
+</li>
+</ul>
+ <!--list-separator-->
+<ul>
+<li>
+<p>Other类型</p>
+<p>是一个抽象的标记，用于表示链值（示意图中的ch）。在LLVM示意图中，当另一个节点使用一个Other类型的值的时候，连接两者的连线被打印为蓝色的虚线。chain链的缩写</p>
+</li>
+</ul>
+ <!--list-separator-->
+<ul>
+<li>
+<p>Glue类型</p>
+<p>表示粘合。在LLVM示意图中，当另一个节点使用一个Glue类型的值的时候，连接两者的连线被画成红色。</p>
+</li>
+</ul>
+</li>
+</ul>
+<!--list-separator-->
+<ul>
+<li>
+<p>SelectionDAG</p>
+<p>基本块入口的EntryToken，Other类型，链的起点。SelectionDAG对象还会引用图的根节点，这个根节点是最后一条指令的后续节点，它们的关系也被编码为Other类型的值的一个链。
+selectiondag 构建 sdnode 创建 结构</p>
+<p>在这个阶段，目标无关和目标特定的节点可以同时存在，这是执行预备步骤的结果，例如低层化和合法化，这些预备步骤负责为指令选择准备DAG。然而，等到指令选择结束的时候，所有被目标指令匹配的节点都会是目标特定的。
+代码入口 SelectionDAGISel::SelectBasicBlock 构建selectiondag  gdb or lldb进行查看</p>
+</li>
+</ul>
+<h4 id="低层化-lowering">低层化 lowering<a class="anchorjs-link" href="#%e4%bd%8e%e5%b1%82%e5%8c%96-lowering"></a></h4><p>首先，一个SelectionDAGBuilder实例（详情见SelectionDAGISel.cpp）访问每个函数，为每个基本块创建一个SelectionDAG对象。
+在此过程期间，一些特殊的IR指令例如call和ret已经要求目标特定的语句——例如，如何传递调用参数和如何从一个函数返回——被转换为SelectionDAG节点。
+为了解决这个问题，TargetLowering class中的算法第一次被使用。这个class是每个目标都必须实现的抽象接口，但是还有大量共用的功能被所有后端所使用。</p>
+<p>为了实现这个抽象接口，每个目标声明一个TargetLowering的子类，命名为&lt;Target&gt;TargetLowering。每个目标还重载方法，它们实现一个具体的目标无关的高层次的节点应该如何被低层化到一个层次，它接近这个机器的节点。如期望那样，仅有小部分节点必须以这种方式低层化，而大部分其它节点在指令选择时被匹配和替换。
+例如，在sum.bc的SelectionDAG中，用X86TargetLowering::LowerReturn()方法（参见lib/Target/X86/X86ISelLowering.cpp）低层化ret IR指令。同时，生成了X86ISD::RET_FLAG节点，它将函数结果复制到EAX——一种处理函数返回的目标特定的方式。</p>
+<h4 id="dag结合与合法化">DAG结合与合法化<a class="anchorjs-link" href="#dag%e7%bb%93%e5%90%88%e4%b8%8e%e5%90%88%e6%b3%95%e5%8c%96"></a></h4><p>从SelectionDAGBuilder输出的SelectionDAG并不能直接作指令选择，必须经历附加的转换——如前面图中所显示的。先于指令选择执行的Pass序列如下：</p>
+<!--list-separator-->
+<ul>
+<li>
+<p>DAG结合Pass combine</p>
+<p>优化欠优化的SelectionDAG结构，通过匹配一系列节点并用简化的结构替换它们，当可获利时。
+例如，子图(add (Register X), (constant 0))可以合并为(RegisterX)。
+类似地，目标特定的结合方法可以识别节点模式，并决定结合合并它们是否将提高此目标的指令选择的质量。
+在lib/CodeGen/SelectionDAG/DAGCombiner.cpp文件中找到LLVM通用的DAG结合的实现。
+在lib/Target/&lt;Target_Name&gt;/&lt;Target&gt;ISelLowering.cpp文件中找到目标特定的结合的实现。
+方法setTargetDAGCombine()标记目标想要结合的节点。举例来说，MIPS后端尝试结合加法——见lib/Target/Mips/MipsISelLowering.cpp中的setTargetDAGCombine(ISD::ADD)和performADDCombine()。</p>
+ <!--list-separator-->
+<ul>
+<li>
+<p>时机</p>
+<p>DAG结合在每次合法化之后运行，以最小化任何SelectionDAG冗余。而且，DAG结合知道在Pass链的何处运行，（例如在类型合法化或者向量合法化之后），能够运用这些信息以变得更精确。</p>
+</li>
+</ul>
+</li>
+</ul>
+<!--list-separator-->
+<ul>
+<li>
+<p>合法化 legalized</p>
+<p>对于某些类型，扩展会消除向量而使用标量。这可能引入目标不支持的标量类型。然而，后续的类型合法化会清理这种情况。</p>
+ <!--list-separator-->
+<ul>
+<li>
+<p>类型合法化</p>
+<p>类型合法化Pass确保指令选择只需要处理合法的类型。
+合法的类型是指目标天然地支持的类型。例如，在只支持i32类型的目标上，i64操作数的加法是非法的。在这种情况下，类型合法化动作整数展开把i64操作数破分为两个i32操作数，同时生成合适的节点以操作它们。目标定义了每种类型所关联的寄存器，显式地声明了支持的类型。这样，非法的类型必须被删除并相应地处理：标量类型可以被提升，展开，或者软件化，而向量类型可以被分解，标量化，或者放宽——见llvm/include/llvm/Target/TargetLowering.h对每种情况的解释。此外，目标还可以设置定制的方法来合法化类型。
+类型合法化运行两次，在第一次DAG结合之后和在向量合法化之后。</p>
+</li>
+</ul>
+ <!--list-separator-->
+<ul>
+<li>
+<p>向量合法化</p>
+<p>有的时候，后端直接支持向量类型，这意味着有一个这样的寄存器类，但是没有处理给定向量类型的具体的操作。例如，x86的SSE2支持v4i32向量类型。然而，并没有x86指令支持v4i32类型的ISD::OR操作，而只有v2i64的。因此，向量合法化会处理这种情况，提升或者扩展操作，为指令使用合法的类型。目标还可以通过定制的方式处理合法化。对于前面提到的ISD::OR，操作会被提升而使用v2i64类型。看一看下面的lib/Target/X86/X86ISelLowering.cpp的代码片段：</p>
+</li>
+</ul>
+ <!--list-separator-->
+<ul>
+<li>
+<p>DAG合法化</p>
+<p>扮演向量合法化一样的角色，但是它处理任意剩余的具有不支持的类型（标量或向量）的操作。它支持相同的动作：提升、扩展、和定制节点的处理。举例来说，x86不支持以下三种情形：i8类型的有符号整数到浮点数的转化操作（ISD::SINT_TO_FP），请求合法化提升它；i32操作数的有符号除法（ISD::SDIV），发起一个扩展请求，产生一个库调用以处理这个除法；f32操作数的浮点数绝对值，利用定制的句柄生成具有相同效果的等价的代码。x86以如下方式发起这些动作（参见lib/Target/X86/X86ISelLowering.cpp）：</p>
+</li>
+</ul>
+</li>
+</ul>
+<h4 id="dag到dag的指令选择的目的">DAG到DAG的指令选择的目的<a class="anchorjs-link" href="#dag%e5%88%b0dag%e7%9a%84%e6%8c%87%e4%bb%a4%e9%80%89%e6%8b%a9%e7%9a%84%e7%9b%ae%e7%9a%84"></a></h4><p>利用模式匹配将目标无关的节点转换为目标特定的节点。指令选择的算法是局部的，每次作用SelectionDAG（基本块）的实例。
+作为例子，后面给出了指令选择之后我们最终的SelectionDAG结构。CopyToReg、CopyFromReg、和Register节点保持不变，直到寄存器分配。实际上，指令选择过程甚至可能增加节点。指令选择之后，ISD::ADD节点被转换为X86指令ADD32ri8，X86ISD::RET_FLAG变为RET。
+注意，三种指令表示类型可能在同一个DAG中并存：通用的LLVM ISD节点比如ISD::ADD，目标特定的&lt;Target&gt;ISD节点比如X86ISD::REG_FLAG，目标物理指令比如X86::ADD32ri8。</p>
+<h4 id="sdnode">sdnode<a class="anchorjs-link" href="#sdnode"></a></h4><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-tablegen" data-lang="tablegen"><span class="line"><span class="cl">        <span class="k">class</span> <span class="nv">SDNode</span><span class="p">&lt;</span><span class="k">string</span> <span class="nv">opcode</span><span class="p">,</span> <span class="nv">SDTypeProfile</span> <span class="nv">typeprof</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">             <span class="k">list</span><span class="p">&lt;</span><span class="nv">SDNodeProperty</span><span class="p">&gt;</span> <span class="nv">props</span> <span class="p">=</span> <span class="p">[],</span> <span class="k">string</span> <span class="nv">sdclass</span> <span class="p">=</span> <span class="s">&#34;SDNode&#34;</span><span class="p">&gt;</span>
+</span></span><span class="line"><span class="cl">             <span class="p">:</span> <span class="nv">SDPatternOperator</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">       <span class="k">string</span> <span class="nv">Opcode</span>  <span class="p">=</span> <span class="nv">opcode</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">       <span class="k">string</span> <span class="nv">SDClass</span> <span class="p">=</span> <span class="nv">sdclass</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">       <span class="k">let</span> <span class="nv">Properties</span> <span class="p">=</span> <span class="nv">props</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">       <span class="nv">SDTypeProfile</span> <span class="nv">TypeProfile</span> <span class="p">=</span> <span class="nv">typeprof</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">       <span class="p">}</span>
+</span></span></code></pre></div><p>sdnodeproperty 中有SDNPHasChain属性，表示指令涉及控制依赖在这个简单的dag(单独块构成)中,用于规定指令的执行顺序，像add之类的指令由于已经有明确的数据流依赖进行规定顺序,
+所以不再需要这个属性。
+在copyto/fromReg指令(用于寄存器分配前的虚拟寄存器)中使用很多</p>
+<h3 id="tablegen">tablegen<a class="anchorjs-link" href="#tablegen"></a></h3><p>分为前后端
+具体实现由后端生成
+llvm-tblgen -gen-register-info X86.td -I ../../../include</p>
+<h4 id="特别类型">特别类型<a class="anchorjs-link" href="#%e7%89%b9%e5%88%ab%e7%b1%bb%e5%9e%8b"></a></h4><p>dag (operator operand1, operand2,…, operandN)
+操作符只能是一个记录实例，操作数 (operand1…operandN) 可以是任意类型
+(可选) 可以将操作符和/或每个操作数与标记相关联，如下所示:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-tablegen" data-lang="tablegen"><span class="line"><span class="cl"> <span class="k">def</span> <span class="nv">tmp1</span> <span class="p">:</span> <span class="nv">Expression</span><span class="p">&lt;(</span><span class="nv">mul</span><span class="p">:</span><span class="nv">$op</span> <span class="nv">x</span><span class="p">,</span> <span class="m">2</span><span class="p">)&gt;;</span>
+</span></span><span class="line"><span class="cl"> <span class="k">def</span> <span class="nv">tmp2</span> <span class="p">:</span> <span class="nv">Expression</span><span class="p">&lt;(</span><span class="nv">mul</span><span class="p">:</span><span class="nv">$op</span> <span class="m">8</span><span class="p">,</span> <span class="nv">z</span><span class="p">)&gt;;</span>
+</span></span><span class="line"><span class="cl"> <span class="k">def</span> <span class="nv">result</span> <span class="p">:</span> <span class="nv">Expression</span><span class="p">&lt;(</span><span class="nv">plus</span> <span class="nv">tmp1</span><span class="p">:</span><span class="nv">$term1</span><span class="p">,</span> <span class="nv">tmp2</span><span class="p">:</span><span class="nv">$term2</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl"> <span class="nv">y</span><span class="p">:</span><span class="nv">$term3</span><span class="p">)&gt;;</span>
+</span></span></code></pre></div><p>标签总是以美元符号 $ 开头，然后是用户定义的标签名。这些标记提供了每个 DAG 组件的逻
+辑描述。
+只是一个信息聚合，具体实现由后端生成.</p>
+<h4 id="一个例子">一个例子<a class="anchorjs-link" href="#%e4%b8%80%e4%b8%aa%e4%be%8b%e5%ad%90"></a></h4><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-tablegen" data-lang="tablegen"><span class="line"><span class="cl"><span class="k">def</span> <span class="nv">GR16</span> <span class="p">:</span> <span class="nv">RegisterClass</span><span class="p">&lt;</span><span class="s">&#34;X86&#34;</span><span class="p">,</span> <span class="p">[</span><span class="nv">i16</span><span class="p">],</span> <span class="m">16</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">                      <span class="p">(</span><span class="nv">add</span> <span class="nv">AX</span><span class="p">,</span> <span class="nv">CX</span><span class="p">,</span> <span class="nv">DX</span><span class="p">,</span> <span class="p">...,</span> <span class="nv">BX</span><span class="p">,</span> <span class="nv">BP</span><span class="p">,</span> <span class="nv">SP</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">                          <span class="nv">R8W</span><span class="p">,</span> <span class="nv">R9W</span><span class="p">,</span> <span class="p">...,</span> <span class="nv">R15W</span><span class="p">,</span> <span class="nv">R12W</span><span class="p">,</span> <span class="nv">R13W</span><span class="p">)&gt;;</span>
+</span></span></code></pre></div><p>RegisterClass在：
+/llvm/include/llvm/target/target.td 许多基类在此目录中</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-tablegen" data-lang="tablegen"><span class="line"><span class="cl"><span class="k">class</span> <span class="nv">RegisterClass</span><span class="p">&lt;</span><span class="k">string</span> <span class="nv">namespace</span><span class="p">,</span> <span class="k">list</span><span class="p">&lt;</span><span class="nv">ValueType</span><span class="p">&gt;</span> <span class="nv">regTypes</span><span class="p">,</span> <span class="k">int</span> <span class="nv">alignment</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">                    <span class="k">dag</span> <span class="nv">regList</span><span class="p">,</span> <span class="nv">RegAltNameIndex</span> <span class="nv">idx</span> <span class="p">=</span> <span class="nv">NoRegAltName</span><span class="p">&gt;</span>
+</span></span><span class="line"><span class="cl">  <span class="p">:</span> <span class="nv">DAGOperand</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="k">string</span> <span class="nv">Namespace</span> <span class="p">=</span> <span class="nv">namespace</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="c">// The register size/alignment information, parameterized by a HW mode.
+</span></span></span><span class="line"><span class="cl"><span class="c"></span>  <span class="nv">RegInfoByHwMode</span> <span class="nv">RegInfos</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="c">// RegType - Specify the list ValueType of the registers in this register
+</span></span></span><span class="line"><span class="cl"><span class="c"></span>  <span class="c">// class.  Note that all registers in a register class must have the same
+</span></span></span><span class="line"><span class="cl"><span class="c"></span>  <span class="c">// ValueTypes.  This is a list because some targets permit storing different
+</span></span></span><span class="line"><span class="cl"><span class="c"></span>  <span class="c">// types in same register, for example vector values with 128-bit total size,
+</span></span></span><span class="line"><span class="cl"><span class="c"></span>  <span class="c">// but different count/size of items, like SSE on x86.
+</span></span></span><span class="line"><span class="cl"><span class="c"></span>  <span class="c">//
+</span></span></span><span class="line"><span class="cl"><span class="c"></span>  <span class="k">list</span><span class="p">&lt;</span><span class="nv">ValueType</span><span class="p">&gt;</span> <span class="nv">RegTypes</span> <span class="p">=</span> <span class="nv">regTypes</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="c">// Size - Specify the spill size in bits of the registers.  A default value of
+</span></span></span><span class="line"><span class="cl"><span class="c"></span>  <span class="c">// zero lets tablgen pick an appropriate size.
+</span></span></span><span class="line"><span class="cl"><span class="c"></span>  <span class="k">int</span> <span class="nv">Size</span> <span class="p">=</span> <span class="m">0</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="c">// Alignment - Specify the alignment required of the registers when they are
+</span></span></span><span class="line"><span class="cl"><span class="c"></span>  <span class="c">// stored or loaded to memory.
+</span></span></span><span class="line"><span class="cl"><span class="c"></span>  <span class="c">//
+</span></span></span><span class="line"><span class="cl"><span class="c"></span>  <span class="k">int</span> <span class="nv">Alignment</span> <span class="p">=</span> <span class="nv">alignment</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="c">// CopyCost - This value is used to specify the cost of copying a value
+</span></span></span><span class="line"><span class="cl"><span class="c"></span>  <span class="c">// between two registers in this register class. The default value is one
+</span></span></span><span class="line"><span class="cl"><span class="c"></span>  <span class="c">// meaning it takes a single instruction to perform the copying. A negative
+</span></span></span><span class="line"><span class="cl"><span class="c"></span>  <span class="c">// value means copying is extremely expensive or impossible.
+</span></span></span><span class="line"><span class="cl"><span class="c"></span>  <span class="k">int</span> <span class="nv">CopyCost</span> <span class="p">=</span> <span class="m">1</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="c">// MemberList - Specify which registers are in this class.  If the
+</span></span></span><span class="line"><span class="cl"><span class="c"></span>  <span class="c">// allocation_order_* method are not specified, this also defines the order of
+</span></span></span><span class="line"><span class="cl"><span class="c"></span>  <span class="c">// allocation used by the register allocator.
+</span></span></span><span class="line"><span class="cl"><span class="c"></span>  <span class="c">//
+</span></span></span><span class="line"><span class="cl"><span class="c"></span>  <span class="k">dag</span> <span class="nv">MemberList</span> <span class="p">=</span> <span class="nv">regList</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="c">// AltNameIndex - The alternate register name to use when printing operands
+</span></span></span><span class="line"><span class="cl"><span class="c"></span>  <span class="c">// of this register class. Every register in the register class must have
+</span></span></span><span class="line"><span class="cl"><span class="c"></span>  <span class="c">// a valid alternate name for the given index.
+</span></span></span><span class="line"><span class="cl"><span class="c"></span>  <span class="nv">RegAltNameIndex</span> <span class="nv">altNameIndex</span> <span class="p">=</span> <span class="nv">idx</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="c">// isAllocatable - Specify that the register class can be used for virtual
+</span></span></span><span class="line"><span class="cl"><span class="c"></span>  <span class="c">// registers and register allocation.  Some register classes are only used to
+</span></span></span><span class="line"><span class="cl"><span class="c"></span>  <span class="c">// model instruction operand constraints, and should have isAllocatable = 0.
+</span></span></span><span class="line"><span class="cl"><span class="c"></span>  <span class="k">bit</span> <span class="nv">isAllocatable</span> <span class="p">=</span> <span class="m">1</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="c">// AltOrders - List of alternative allocation orders. The default order is
+</span></span></span><span class="line"><span class="cl"><span class="c"></span>  <span class="c">// MemberList itself, and that is good enough for most targets since the
+</span></span></span><span class="line"><span class="cl"><span class="c"></span>  <span class="c">// register allocators automatically remove reserved registers and move
+</span></span></span><span class="line"><span class="cl"><span class="c"></span>  <span class="c">// callee-saved registers to the end.
+</span></span></span><span class="line"><span class="cl"><span class="c"></span>  <span class="k">list</span><span class="p">&lt;</span><span class="k">dag</span><span class="p">&gt;</span> <span class="nv">AltOrders</span> <span class="p">=</span> <span class="p">[];</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="c">// AltOrderSelect - The body of a function that selects the allocation order
+</span></span></span><span class="line"><span class="cl"><span class="c"></span>  <span class="c">// to use in a given machine function. The code will be inserted in a
+</span></span></span><span class="line"><span class="cl"><span class="c"></span>  <span class="c">// function like this:
+</span></span></span><span class="line"><span class="cl"><span class="c"></span>  <span class="c">//
+</span></span></span><span class="line"><span class="cl"><span class="c"></span>  <span class="c">//   static inline unsigned f(const MachineFunction &amp;MF) { ... }
+</span></span></span><span class="line"><span class="cl"><span class="c"></span>  <span class="c">//
+</span></span></span><span class="line"><span class="cl"><span class="c"></span>  <span class="c">// The function should return 0 to select the default order defined by
+</span></span></span><span class="line"><span class="cl"><span class="c"></span>  <span class="c">// MemberList, 1 to select the first AltOrders entry and so on.
+</span></span></span><span class="line"><span class="cl"><span class="c"></span>  <span class="k">code</span> <span class="nv">AltOrderSelect</span> <span class="p">=</span> <span class="s">[{}]</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="c">// Specify allocation priority for register allocators using a greedy
+</span></span></span><span class="line"><span class="cl"><span class="c"></span>  <span class="c">// heuristic. Classes with higher priority values are assigned first. This is
+</span></span></span><span class="line"><span class="cl"><span class="c"></span>  <span class="c">// useful as it is sometimes beneficial to assign registers to highly
+</span></span></span><span class="line"><span class="cl"><span class="c"></span>  <span class="c">// constrained classes first. The value has to be in the range [0,63].
+</span></span></span><span class="line"><span class="cl"><span class="c"></span>  <span class="k">int</span> <span class="nv">AllocationPriority</span> <span class="p">=</span> <span class="m">0</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="c">// The diagnostic type to present when referencing this operand in a match
+</span></span></span><span class="line"><span class="cl"><span class="c"></span>  <span class="c">// failure error message. If this is empty, the default Match_InvalidOperand
+</span></span></span><span class="line"><span class="cl"><span class="c"></span>  <span class="c">// diagnostic type will be used. If this is &#34;&lt;name&gt;&#34;, a Match_&lt;name&gt; enum
+</span></span></span><span class="line"><span class="cl"><span class="c"></span>  <span class="c">// value will be generated and used for this operand type. The target
+</span></span></span><span class="line"><span class="cl"><span class="c"></span>  <span class="c">// assembly parser is responsible for converting this into a user-facing
+</span></span></span><span class="line"><span class="cl"><span class="c"></span>  <span class="c">// diagnostic message.
+</span></span></span><span class="line"><span class="cl"><span class="c"></span>  <span class="k">string</span> <span class="nv">DiagnosticType</span> <span class="p">=</span> <span class="s">&#34;&#34;</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="c">// A diagnostic message to emit when an invalid value is provided for this
+</span></span></span><span class="line"><span class="cl"><span class="c"></span>  <span class="c">// register class when it is being used an an assembly operand. If this is
+</span></span></span><span class="line"><span class="cl"><span class="c"></span>  <span class="c">// non-empty, an anonymous diagnostic type enum value will be generated, and
+</span></span></span><span class="line"><span class="cl"><span class="c"></span>  <span class="c">// the assembly matcher will provide a function to map from diagnostic types
+</span></span></span><span class="line"><span class="cl"><span class="c"></span>  <span class="c">// to message strings.
+</span></span></span><span class="line"><span class="cl"><span class="c"></span>  <span class="k">string</span> <span class="nv">DiagnosticString</span> <span class="p">=</span> <span class="s">&#34;&#34;</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c">// The memberList in a RegisterClass is a dag of set operations. TableGen
+</span></span></span><span class="line"><span class="cl"><span class="c">// evaluates these set operations and expand them into register lists. These
+</span></span></span><span class="line"><span class="cl"><span class="c">// are the most common operation, see test/TableGen/SetTheory.td for more
+</span></span></span><span class="line"><span class="cl"><span class="c">// examples of what is possible:
+</span></span></span><span class="line"><span class="cl"><span class="c">//
+</span></span></span><span class="line"><span class="cl"><span class="c">// (add R0, R1, R2) - Set Union. Each argument can be an individual register, a
+</span></span></span><span class="line"><span class="cl"><span class="c">// register class, or a sub-expression. This is also the way to simply list
+</span></span></span><span class="line"><span class="cl"><span class="c">// registers.
+</span></span></span></code></pre></div><p><em>llvm/test/TableGen/SetTheory.td
+中有许多dag定义 如（add x,y,&hellip;）
+patterm (set )
+/llvm/include/llvm/codegen</em>
+cpu0.td  一系列td</p>
+<p>/include/llvm/target/targetselectionDAG.td</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-tablegen" data-lang="tablegen"><span class="line"><span class="cl">    <span class="k">class</span> <span class="nv">PatFrags</span><span class="p">&lt;</span><span class="k">dag</span> <span class="nv">ops</span><span class="p">,</span> <span class="k">list</span><span class="p">&lt;</span><span class="k">dag</span><span class="p">&gt;</span> <span class="nv">frags</span><span class="p">,</span> <span class="k">code</span> <span class="nv">pred</span> <span class="p">=</span> <span class="s">[{}]</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">               <span class="nv">SDNodeXForm</span> <span class="nv">xform</span> <span class="p">=</span> <span class="nv">NOOP_SDNodeXForm</span><span class="p">&gt;</span> <span class="p">:</span> <span class="nv">SDPatternOperator</span>
+</span></span><span class="line"><span class="cl">   <span class="err">/</span><span class="nv">include</span><span class="err">/</span><span class="nv">llvm</span><span class="err">/</span><span class="nv">codegen</span><span class="err">/</span><span class="nv">sdnodeproperties</span><span class="p">.</span><span class="nv">td</span>
+</span></span><span class="line"><span class="cl">   <span class="k">class</span> <span class="nv">SDPatternOperator</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">     <span class="k">list</span><span class="p">&lt;</span><span class="nv">SDNodeProperty</span><span class="p">&gt;</span> <span class="nv">Properties</span> <span class="p">=</span> <span class="p">[];</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="err">#+</span><span class="nv">end_</span><span class="err">#+</span><span class="nv">begin_src</span>
+</span></span></code></pre></div>
+
+        <hr style="visibility: hidden;" />
+        <ul class="pager">
+          
+          <li class="previous">
+            <a href="/posts/2025/01/llvm-ir-part2/" data-toggle="tooltip" data-placement="top" title="LLVM IR Part2">
+              Previous<br>
+              <span>LLVM IR Part2</span>
+            </a>
+          </li>
+          
+          
+        </ul>
+        <hr style="visibility: hidden;" />
+
+        
+        
+
+
+
+<script
+  src="https://utteranc.es/client.js"
+  repo="roife/hugo-theme-pupi"
+  issue-term="pathname"
+  label="Comment"
+  theme="preferred-color-scheme"
+  crossorigin="anonymous"
+  async></script>
+
+
+
+
+        
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.css" integrity="sha384-vKruj+a13U8yHIkAyGgK1J3ArTLzrFGBbBc0tDp4ad/EyewESeXE/Iv67Aj8gKZ0" crossorigin="anonymous">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.js" integrity="sha384-PwRUT/YqbnEjkZO0zZxNqcxACrXe+j766U2amXcgMg5457rve2Y7I6ZJSm2A0mS4" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/contrib/auto-render.min.js" integrity="sha384-+VBxd3r6XgURycqtZ117nYw44OOcIax56Z4dCRWbxyPt0Koah1uHoK0o4+/RRE05" crossorigin="anonymous"></script>
+<script>
+ document.addEventListener("DOMContentLoaded", function() {
+   renderMathInElement(document.body, {
+     
+     
+     delimiters: [
+       {left: "\\(", right: "\\)", display: false},
+
+       {left: "\\begin{array}", right: "\\end{array}", display: true},
+
+       {left: "\\begin{matrix}", right: "\\end{matrix}", display: true},
+       {left: "\\begin{matrix*}", right: "\\end{matrix*}", display: true},
+       {left: "\\begin{bmatrix}", right: "\\end{bmatrix}", display: true},
+       {left: "\\begin{bmatrix*}", right: "\\end{bmatrix*}", display: true},
+       {left: "\\begin{Bmatrix}", right: "\\end{Bmatrix}", display: true},
+       {left: "\\begin{Bmatrix*}", right: "\\end{Bmatrix*}", display: true},
+       {left: "\\begin{vmatrix}", right: "\\end{vmatrix}", display: true},
+       {left: "\\begin{vmatrix*}", right: "\\end{vmatrix*}", display: true},
+       {left: "\\begin{Vmatrix}", right: "\\end{Vmatrix}", display: true},
+       {left: "\\begin{Vmatrix*}", right: "\\end{Vmatrix*}", display: true},
+       {left: "\\begin{pmatrix}", right: "\\end{pmatrix}", display: true},
+       {left: "\\begin{pmatrix*}", right: "\\end{pmatrix*}", display: true},
+       {left: "\\begin{smallmatrix}", right: "\\end{smallmatrix}", display: true},
+
+       {left: "\\begin{cases}", right: "\\end{cases}", display: true},
+       {left: "\\begin{rcases}", right: "\\end{rcases}", display: true},
+
+       {left: "\\begin{equation}", right: "\\end{equation}", display: true},
+       {left: "\\begin{equation*}", right: "\\end{equation*}", display: true},
+       {left: "\\begin{align}", right: "\\end{align}", display: true},
+       {left: "\\begin{align*}", right: "\\end{align*}", display: true},
+       {left: "\\begin{alignat}", right: "\\end{alignat}", display: true},
+       {left: "\\begin{alignat*}", right: "\\end{alignat*}", display: true},
+       {left: "\\begin{gather}", right: "\\end{gather}", display: true},
+       {left: "\\begin{gather*}", right: "\\end{gather*}", display: true},
+       {left: "\\begin{CD}", right: "\\end{CD}", display: true},
+
+       {left: "\\begin{alignedat}", right: "\\end{alignedat}", display: true},
+       {left: "\\begin{aligned}", right: "\\end{aligned}", display: true},
+       {left: "\\begin{gathered}", right: "\\end{gathered}", display: true},
+
+       {left: "\\begin{darray}", right: "\\end{darray}", display: true},
+       {left: "\\begin{dcases}", right: "\\end{dcases}", display: true},
+       {left: "\\begin{drcases}", right: "\\end{drcases}", display: true},
+
+
+       {left: "\\[", right: "\\]", display: true}
+     ],
+     
+     throwOnError : false
+   });
+ });
+</script>
+
+
+
+<script defer id="pseudocodejs" src="/js/pseudocode.min.js"></script>
+
+<script>
+ pseudocodejs.addEventListener('load', function() {
+   pseudocode.renderClass("pseudocode", {
+     lineNumber: true,
+     lineNumberPunc: ':',
+     scopeLines: true,
+     commentDelimiter: '▹ ',
+     noEnd: true,
+   });
+ });
+</script>
+
+
+
+
+        
+        <style type="text/css" media="screen">
+         @media (prefers-color-scheme: dark) {
+           /* Background */ .bg { color: #ebdbb2; background-color: #282828; }
+/* PreWrapper */ .chroma { color: #ebdbb2; background-color: #282828; }
+/* Other */ .chroma .x {  }
+/* Error */ .chroma .err {  }
+/* CodeLine */ .chroma .cl {  }
+/* LineLink */ .chroma .lnlinks { outline: none; text-decoration: none; color: inherit }
+/* LineTableTD */ .chroma .lntd { vertical-align: top; padding: 0; margin: 0; border: 0; }
+/* LineTable */ .chroma .lntable { border-spacing: 0; padding: 0; margin: 0; border: 0; }
+/* LineHighlight */ .chroma .hl { background-color: #ffffcc }
+/* LineNumbersTable */ .chroma .lnt { white-space: pre; -webkit-user-select: none; user-select: none; margin-right: 0.4em; padding: 0 0.4em 0 0.4em;color: #756d59 }
+/* LineNumbers */ .chroma .ln { white-space: pre; -webkit-user-select: none; user-select: none; margin-right: 0.4em; padding: 0 0.4em 0 0.4em;color: #756d59 }
+/* Line */ .chroma .line { display: flex; }
+/* Keyword */ .chroma .k { color: #fe8019 }
+/* KeywordConstant */ .chroma .kc { color: #fe8019 }
+/* KeywordDeclaration */ .chroma .kd { color: #fe8019 }
+/* KeywordNamespace */ .chroma .kn { color: #fe8019 }
+/* KeywordPseudo */ .chroma .kp { color: #fe8019 }
+/* KeywordReserved */ .chroma .kr { color: #fe8019 }
+/* KeywordType */ .chroma .kt { color: #fabd2f }
+/* Name */ .chroma .n {  }
+/* NameAttribute */ .chroma .na { color: #b8bb26; font-weight: bold }
+/* NameBuiltin */ .chroma .nb { color: #fabd2f }
+/* NameBuiltinPseudo */ .chroma .bp {  }
+/* NameClass */ .chroma .nc {  }
+/* NameConstant */ .chroma .no { color: #d3869b }
+/* NameDecorator */ .chroma .nd {  }
+/* NameEntity */ .chroma .ni { color: #fabd2f }
+/* NameException */ .chroma .ne { color: #fb4934 }
+/* NameFunction */ .chroma .nf { color: #fabd2f }
+/* NameFunctionMagic */ .chroma .fm {  }
+/* NameLabel */ .chroma .nl { color: #fb4934 }
+/* NameNamespace */ .chroma .nn {  }
+/* NameOther */ .chroma .nx {  }
+/* NameProperty */ .chroma .py {  }
+/* NameTag */ .chroma .nt { color: #fb4934 }
+/* NameVariable */ .chroma .nv {  }
+/* NameVariableClass */ .chroma .vc {  }
+/* NameVariableGlobal */ .chroma .vg {  }
+/* NameVariableInstance */ .chroma .vi {  }
+/* NameVariableMagic */ .chroma .vm {  }
+/* Literal */ .chroma .l {  }
+/* LiteralDate */ .chroma .ld {  }
+/* LiteralString */ .chroma .s { color: #b8bb26 }
+/* LiteralStringAffix */ .chroma .sa { color: #b8bb26 }
+/* LiteralStringBacktick */ .chroma .sb { color: #b8bb26 }
+/* LiteralStringChar */ .chroma .sc { color: #b8bb26 }
+/* LiteralStringDelimiter */ .chroma .dl { color: #b8bb26 }
+/* LiteralStringDoc */ .chroma .sd { color: #b8bb26 }
+/* LiteralStringDouble */ .chroma .s2 { color: #b8bb26 }
+/* LiteralStringEscape */ .chroma .se { color: #b8bb26 }
+/* LiteralStringHeredoc */ .chroma .sh { color: #b8bb26 }
+/* LiteralStringInterpol */ .chroma .si { color: #b8bb26 }
+/* LiteralStringOther */ .chroma .sx { color: #b8bb26 }
+/* LiteralStringRegex */ .chroma .sr { color: #b8bb26 }
+/* LiteralStringSingle */ .chroma .s1 { color: #b8bb26 }
+/* LiteralStringSymbol */ .chroma .ss { color: #83a598 }
+/* LiteralNumber */ .chroma .m { color: #d3869b }
+/* LiteralNumberBin */ .chroma .mb { color: #d3869b }
+/* LiteralNumberFloat */ .chroma .mf { color: #d3869b }
+/* LiteralNumberHex */ .chroma .mh { color: #d3869b }
+/* LiteralNumberInteger */ .chroma .mi { color: #d3869b }
+/* LiteralNumberIntegerLong */ .chroma .il { color: #d3869b }
+/* LiteralNumberOct */ .chroma .mo { color: #d3869b }
+/* Operator */ .chroma .o { color: #fe8019 }
+/* OperatorWord */ .chroma .ow { color: #fe8019 }
+/* Punctuation */ .chroma .p {  }
+/* Comment */ .chroma .c { color: #928374; font-style: italic }
+/* CommentHashbang */ .chroma .ch { color: #928374; font-style: italic }
+/* CommentMultiline */ .chroma .cm { color: #928374; font-style: italic }
+/* CommentSingle */ .chroma .c1 { color: #928374; font-style: italic }
+/* CommentSpecial */ .chroma .cs { color: #928374; font-style: italic }
+/* CommentPreproc */ .chroma .cp { color: #8ec07c }
+/* CommentPreprocFile */ .chroma .cpf { color: #8ec07c; font-style: italic }
+/* Generic */ .chroma .g {  }
+/* GenericDeleted */ .chroma .gd { color: #282828; background-color: #fb4934 }
+/* GenericEmph */ .chroma .ge { color: #83a598; text-decoration: underline }
+/* GenericError */ .chroma .gr { background-color: #fb4934; font-weight: bold }
+/* GenericHeading */ .chroma .gh { color: #b8bb26; font-weight: bold }
+/* GenericInserted */ .chroma .gi { color: #282828; background-color: #b8bb26 }
+/* GenericOutput */ .chroma .go { color: #504945 }
+/* GenericPrompt */ .chroma .gp {  }
+/* GenericStrong */ .chroma .gs {  }
+/* GenericSubheading */ .chroma .gu { color: #b8bb26; font-weight: bold }
+/* GenericTraceback */ .chroma .gt { background-color: #fb4934; font-weight: bold }
+/* GenericUnderline */ .chroma .gl {  }
+/* TextWhitespace */ .chroma .w {  }
+
+         }
+         @media (prefers-color-scheme: light) {
+           /* Background */ .bg { background-color: #f8f8f8; }
+/* PreWrapper */ .chroma { background-color: #f8f8f8; }
+/* Other */ .chroma .x { color: #000000 }
+/* Error */ .chroma .err { color: #a40000 }
+/* CodeLine */ .chroma .cl {  }
+/* LineLink */ .chroma .lnlinks { outline: none; text-decoration: none; color: inherit }
+/* LineTableTD */ .chroma .lntd { vertical-align: top; padding: 0; margin: 0; border: 0; }
+/* LineTable */ .chroma .lntable { border-spacing: 0; padding: 0; margin: 0; border: 0; }
+/* LineHighlight */ .chroma .hl { background-color: #ffffcc }
+/* LineNumbersTable */ .chroma .lnt { white-space: pre; -webkit-user-select: none; user-select: none; margin-right: 0.4em; padding: 0 0.4em 0 0.4em;color: #7f7f7f }
+/* LineNumbers */ .chroma .ln { white-space: pre; -webkit-user-select: none; user-select: none; margin-right: 0.4em; padding: 0 0.4em 0 0.4em;color: #7f7f7f }
+/* Line */ .chroma .line { display: flex; }
+/* Keyword */ .chroma .k { color: #204a87; font-weight: bold }
+/* KeywordConstant */ .chroma .kc { color: #204a87; font-weight: bold }
+/* KeywordDeclaration */ .chroma .kd { color: #204a87; font-weight: bold }
+/* KeywordNamespace */ .chroma .kn { color: #204a87; font-weight: bold }
+/* KeywordPseudo */ .chroma .kp { color: #204a87; font-weight: bold }
+/* KeywordReserved */ .chroma .kr { color: #204a87; font-weight: bold }
+/* KeywordType */ .chroma .kt { color: #204a87; font-weight: bold }
+/* Name */ .chroma .n { color: #000000 }
+/* NameAttribute */ .chroma .na { color: #c4a000 }
+/* NameBuiltin */ .chroma .nb { color: #204a87 }
+/* NameBuiltinPseudo */ .chroma .bp { color: #3465a4 }
+/* NameClass */ .chroma .nc { color: #000000 }
+/* NameConstant */ .chroma .no { color: #000000 }
+/* NameDecorator */ .chroma .nd { color: #5c35cc; font-weight: bold }
+/* NameEntity */ .chroma .ni { color: #ce5c00 }
+/* NameException */ .chroma .ne { color: #cc0000; font-weight: bold }
+/* NameFunction */ .chroma .nf { color: #000000 }
+/* NameFunctionMagic */ .chroma .fm { color: #000000 }
+/* NameLabel */ .chroma .nl { color: #f57900 }
+/* NameNamespace */ .chroma .nn { color: #000000 }
+/* NameOther */ .chroma .nx { color: #000000 }
+/* NameProperty */ .chroma .py { color: #000000 }
+/* NameTag */ .chroma .nt { color: #204a87; font-weight: bold }
+/* NameVariable */ .chroma .nv { color: #000000 }
+/* NameVariableClass */ .chroma .vc { color: #000000 }
+/* NameVariableGlobal */ .chroma .vg { color: #000000 }
+/* NameVariableInstance */ .chroma .vi { color: #000000 }
+/* NameVariableMagic */ .chroma .vm { color: #000000 }
+/* Literal */ .chroma .l { color: #000000 }
+/* LiteralDate */ .chroma .ld { color: #000000 }
+/* LiteralString */ .chroma .s { color: #4e9a06 }
+/* LiteralStringAffix */ .chroma .sa { color: #4e9a06 }
+/* LiteralStringBacktick */ .chroma .sb { color: #4e9a06 }
+/* LiteralStringChar */ .chroma .sc { color: #4e9a06 }
+/* LiteralStringDelimiter */ .chroma .dl { color: #4e9a06 }
+/* LiteralStringDoc */ .chroma .sd { color: #8f5902; font-style: italic }
+/* LiteralStringDouble */ .chroma .s2 { color: #4e9a06 }
+/* LiteralStringEscape */ .chroma .se { color: #4e9a06 }
+/* LiteralStringHeredoc */ .chroma .sh { color: #4e9a06 }
+/* LiteralStringInterpol */ .chroma .si { color: #4e9a06 }
+/* LiteralStringOther */ .chroma .sx { color: #4e9a06 }
+/* LiteralStringRegex */ .chroma .sr { color: #4e9a06 }
+/* LiteralStringSingle */ .chroma .s1 { color: #4e9a06 }
+/* LiteralStringSymbol */ .chroma .ss { color: #4e9a06 }
+/* LiteralNumber */ .chroma .m { color: #0000cf; font-weight: bold }
+/* LiteralNumberBin */ .chroma .mb { color: #0000cf; font-weight: bold }
+/* LiteralNumberFloat */ .chroma .mf { color: #0000cf; font-weight: bold }
+/* LiteralNumberHex */ .chroma .mh { color: #0000cf; font-weight: bold }
+/* LiteralNumberInteger */ .chroma .mi { color: #0000cf; font-weight: bold }
+/* LiteralNumberIntegerLong */ .chroma .il { color: #0000cf; font-weight: bold }
+/* LiteralNumberOct */ .chroma .mo { color: #0000cf; font-weight: bold }
+/* Operator */ .chroma .o { color: #ce5c00; font-weight: bold }
+/* OperatorWord */ .chroma .ow { color: #204a87; font-weight: bold }
+/* Punctuation */ .chroma .p { color: #000000; font-weight: bold }
+/* Comment */ .chroma .c { color: #8f5902; font-style: italic }
+/* CommentHashbang */ .chroma .ch { color: #8f5902; font-style: italic }
+/* CommentMultiline */ .chroma .cm { color: #8f5902; font-style: italic }
+/* CommentSingle */ .chroma .c1 { color: #8f5902; font-style: italic }
+/* CommentSpecial */ .chroma .cs { color: #8f5902; font-style: italic }
+/* CommentPreproc */ .chroma .cp { color: #8f5902; font-style: italic }
+/* CommentPreprocFile */ .chroma .cpf { color: #8f5902; font-style: italic }
+/* Generic */ .chroma .g { color: #000000 }
+/* GenericDeleted */ .chroma .gd { color: #a40000 }
+/* GenericEmph */ .chroma .ge { color: #000000; font-style: italic }
+/* GenericError */ .chroma .gr { color: #ef2929 }
+/* GenericHeading */ .chroma .gh { color: #000080; font-weight: bold }
+/* GenericInserted */ .chroma .gi { color: #00a000 }
+/* GenericOutput */ .chroma .go { color: #000000; font-style: italic }
+/* GenericPrompt */ .chroma .gp { color: #8f5902 }
+/* GenericStrong */ .chroma .gs { color: #000000; font-weight: bold }
+/* GenericSubheading */ .chroma .gu { color: #800080; font-weight: bold }
+/* GenericTraceback */ .chroma .gt { color: #a40000; font-weight: bold }
+/* GenericUnderline */ .chroma .gl { color: #000000; text-decoration: underline }
+/* TextWhitespace */ .chroma .w { color: #f8f8f8; text-decoration: underline }
+
+         }
+        </style>
+      </div>
+
+      
+      
+      
+      <div class="
+              col-lg-2 col-lg-offset-0
+              visible-lg-block
+              sidebar-container
+              catalog-container">
+        <div class="side-catalog">
+          <hr class="hidden-sm hidden-xs">
+          <h5>
+            <a class="catalog-toggle" href="#">CATALOG</a>
+          </h5>
+          <ul class="catalog-body"></ul>
+        </div>
+      </div>
+      
+    </div>
+  </div>
+</article>
+
+
+
+  
+<footer>
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+        
+        <ul class="list-inline text-center"></ul>
+
+        <p class="copyright text-muted">
+          Copyright &copy; EVER BLOG 2025
+        | Powered by <a href="https://gohugo.io">Hugo</a>
+        | Made with <a href="https://www.gnu.org/software/emacs/">Emacs</a>
+        </p>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script src=/js/jquery.min.js></script>
+<script src=/js/bootstrap.min.js crossorigin="anonymous"></script>
+
+
+
+<script src="/js/hux-blog.min.28f830ee5bc6c824004522fbf7b693d47b1e37a280f3ed6a74f7deec27a1535a.js"></script>
+
+
+<script src=/js/simple-jekyll-search.min.js></script>
+
+
+<script src="/js/search.min.53bce5da475b4d362500e5ce5dddfa22e20e1b9018777411d2020b4b839c9310.js"></script>
+
+
+
+
+
+
+<script type="text/javascript">
+  function generateCatalog(selector) {
+    _containerSelector = 'div.post-container'
+    
+    var P = $(_containerSelector), a, n, t, l, i, c;
+    a = P.find('h1,h2,h3,h4');
+    
+    $(selector).html('')
+    
+    a.each(function () {
+      n = $(this).prop('tagName').toLowerCase();
+      i = "#" + $(this).prop('id');
+      t = $(this).text();
+      c = $('<a href="' + i + '" rel="nofollow">' + t + '</a>');
+      l = $('<li class="' + n + '_nav"></li>').append(c);
+      $(selector).append(l);
+    });
+    return true;
+  }
+
+  generateCatalog(".catalog-body");
+
+  
+  $(".catalog-toggle").click((function (e) {
+    e.preventDefault();
+    $('.side-catalog').toggleClass("fold")
+  }))
+</script>
+
+
+<script type="text/javascript" src='/js/jquery.nav.min.9044d87de16925b06c5879d1310bb3888e0404fa68f2af99fad8fe6292bf6f9c.js'></script>
+<script>
+ $(document).ready( function () {
+   $('.catalog-body').onePageNav({
+     currentClass: "active",
+     changeHash: !1,
+     easing: "swing",
+     filter: "",
+     scrollSpeed: 800,
+     scrollOffset: 0,
+     scrollThreshold: .2,
+     begin: null,
+     end: null,
+     scrollChange: null,
+     padding: 80
+   });
+ });
+</script>
+
+
+
+
+
+
+
+
+<script src="/zoomjs/zoom.min.js"></script>
+
+
+<script>
+ $("div.definition").wrap("<div class='math_block'></div>");
+ $("div.sample").wrap("<div class='math_block'></div>");
+
+ let proof_env = ["theorem", "lemma", "corollary", "proposition", "fact"];
+ proof_env.forEach(function(env) {
+   $('div.' + env + ' + div.proof').each(function() {
+     $(this).prev('div.' + env).addBack().wrapAll('<div class="math_block"></div>');
+   });
+
+   $('div.' + env).not(':has(+div.proof)').wrap('<div class="math_block"></div>');
+ });
+
+ $('div.proof').each(function() {
+   var $prevDiv = $(this).prev();
+
+   if (!proof_env.some(className => $prevDiv.hasClass(className))) {
+     $(this).wrapAll('<div class="math_block"></div>');
+   }
+ });
+
+ $('div.question + div.answer').each(function() {
+   $(this).prev('div.question').addBack().wrapAll('<div class="math_block"></div>');
+ });
+
+ $('div.question').not(':has(+div.answer)').wrap('<div class="math_block"></div>');
+
+ $('div.note').wrap('<div class="math_block"></div>');
+</script>
+
+</body>
+
+</html></html>

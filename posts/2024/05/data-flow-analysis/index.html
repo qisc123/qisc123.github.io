@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-cn">
 
-<head>
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
   <meta charset="utf-8">
   <meta http-equiv="x-ua-compatible" content="ie=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
@@ -36,7 +36,7 @@ In 代表 进入节点 Out 代表 退出节点 ">
   <meta property="og:type" content="article">
     <meta property="article:section" content="posts">
     <meta property="article:published_time" content="2024-05-22T00:00:00+08:00">
-    <meta property="article:modified_time" content="2025-05-08T16:10:45+08:00">
+    <meta property="article:modified_time" content="2025-05-17T16:17:07+08:00">
     <meta property="article:tag" content="数据流分析">
 
   <link rel="stylesheet" href="/css/bootstrap.min.css"  crossorigin="anonymous">
@@ -282,6 +282,7 @@ A variable v is live at point p if there exists a path from p to a use of v alon
 \(\text{{LiveOut}}(n) = \bigcup_{m \in \text{{succ}}(n)} (\text{{UEVar}}(m) \cup (\text{{LiveOut}}(m) \cap \overline{ \text{{VARKill}}(m)}))\) <br/>
 在m中定义了的变量和没有定义的变量 <br/>
 UEVar(m)在m中向上展开的变量的集合 <br/>
+VARKill(m) 在m中重新定义的变量 <br/>
 向上展开：x在m中重新定义之前，使用了x的引用 <br/>
 如果v在m的入口处存活，要么 v在 m中重新定义并且在重新定义前对其引用，要不穿过m在m的后继过程的开始处存活没有在m中重新定义 <br/>
 初始值： <br/>
@@ -786,8 +787,6 @@ If Value(n) is not top, the algorithm adds n to the worklist. <br/>
    });
  });
 </script>
-
-
 
 
 

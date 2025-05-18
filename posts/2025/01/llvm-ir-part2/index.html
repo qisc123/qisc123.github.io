@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-cn">
 
-<head>
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
   <meta charset="utf-8">
   <meta http-equiv="x-ua-compatible" content="ie=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
@@ -34,7 +34,7 @@ entry:
   <meta property="og:type" content="article">
     <meta property="article:section" content="posts">
     <meta property="article:published_time" content="2025-01-10T00:00:00+08:00">
-    <meta property="article:modified_time" content="2025-05-08T16:13:26+08:00">
+    <meta property="article:modified_time" content="2025-05-17T11:12:07+08:00">
     <meta property="article:tag" content="Llvm-Ir">
 
   <link rel="stylesheet" href="/css/bootstrap.min.css"  crossorigin="anonymous">
@@ -270,7 +270,7 @@ on Fri, Jan 10, 2025
 <li>设置返回值 <br/></li>
 </ol>
 <h3 id="调用函数">调用函数<a class="anchorjs-link" href="#%e8%b0%83%e7%94%a8%e5%87%bd%e6%95%b0"></a></h3><p>简单示例 <br/></p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-llvm" data-lang="llvm"><span class="line"><span class="cl"><span class="n">%1</span> <span class="p">=</span> <span class="k">call</span> <span class="k">i32</span> <span class="vg">@function</span><span class="p">(</span><span class="k">i32</span> <span class="err">value</span><span class="p">)</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-llvm" data-lang="llvm"><span class="line"><span class="cl"><span class="nv">%1</span> <span class="p">=</span> <span class="k">call</span> <span class="k">i32</span> <span class="vg">@function</span><span class="p">(</span><span class="k">i32</span> <span class="err">value</span><span class="p">)</span>
 </span></span></code></pre></div><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-C++" data-lang="C++"><span class="line"><span class="cl"><span class="k">auto</span> <span class="n">callable</span> <span class="o">=</span> <span class="n">gen</span><span class="p">(</span><span class="n">ast</span><span class="p">,</span> <span class="n">env</span><span class="p">);</span><span class="c1">//llvm::value* 即前面llvm::Function::Create()函数创建的对象
 </span></span></span><span class="line"><span class="cl"><span class="c1">//  生成可调用对象（函数名或表达式）
 </span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">llvm</span><span class="o">::</span><span class="n">Value</span><span class="o">*&gt;</span> <span class="n">args</span><span class="p">{};</span>                <span class="c1">// 参数列表
@@ -297,7 +297,8 @@ on Fri, Jan 10, 2025
 </span></span><span class="line"><span class="cl"><span class="p">};</span>
 </span></span></code></pre></div><ol>
 <li>填充ClassInfo和StructType类型 同时生成对应的成员函数 <br/>
-若类型point有一个构造函数名为constructor，在llvm ir中函数名为point_constructor <br/>
+若类型point有一个构造函数名为constructor，在llvm ir中函数名为point_constructor。注：ptr为新版llvm-15以后的opaque ptr mode 后，指针的表示，此时指针类型不再保存类型信息， <br/>
+类型信息全部在alloca、store、load等指令的生成时作为参数传入。可能需要另外的数据结构存放ast中解析变量的类型信息。在llvm-14及之前指针表示为type* 与C一致。 <br/>
 示例： <br/>
 <div class="highlight"><pre tabindex="0" class="chroma"><code class="language-llvm" data-lang="llvm"><span class="line"><span class="cl">   <span class="k">define</span> <span class="k">i32</span> <span class="vg">@Point_constructor</span><span class="p">(</span><span class="err">ptr</span> <span class="nv">%self</span><span class="p">,</span> <span class="k">i32</span> <span class="nv">%x</span><span class="p">,</span> <span class="k">i32</span> <span class="nv">%y</span><span class="p">)</span> <span class="p">{</span>
 </span></span><span class="line"><span class="cl">   <span class="nl">entry:</span>
@@ -312,8 +313,72 @@ on Fri, Jan 10, 2025
 </span></span></code></pre></div></li>
 </ol>
 <h3 id="gep">GEP<a class="anchorjs-link" href="#gep"></a></h3><p>在类型中会用到gep这条llvm-ir指令，下图是其基本格式 <br/>
-&lt;address&gt; = getelementptr &lt;ty&gt;, &lt;ty&gt;* base, idx1, idx2,&hellip; <br/></p>
-
+&lt;address&gt; = getelementptr &lt;ty&gt;, &lt;ty&gt;* base, idx1, idx2,&hellip; <br/>
+示例：若要取之前结构体的一个变量的地址： <br/></p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-llvm" data-lang="llvm"><span class="line"><span class="cl"><span class="nv">%1</span> <span class="p">=</span> <span class="k">getelementptr</span> <span class="k">inbounds</span> <span class="nv">%Point</span><span class="p">,</span> <span class="nv">%Point</span><span class="p">*</span> <span class="nv">%0</span><span class="p">,</span> <span class="k">i32</span> <span class="m">0</span><span class="p">,</span> <span class="k">i32</span> <span class="m">0</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-C++" data-lang="C++"><span class="line"><span class="cl"><span class="k">auto</span> <span class="n">address</span> <span class="o">=</span> <span class="n">builder</span><span class="o">-&gt;</span><span class="n">CreateStructGEP</span><span class="p">(</span><span class="n">type</span> <span class="p">,</span><span class="n">ptr</span><span class="p">,</span> <span class="n">index</span><span class="p">,</span> <span class="n">ptrname</span><span class="p">);</span>
+</span></span></code></pre></div><h2 id="instance-heap-allcoate">Instance heap allcoate<a class="anchorjs-link" href="#instance-heap-allcoate"></a></h2><p>使用外部函数比如C标准库中的malloc,返回一个指针，具体见其api <br/></p>
+<h2 id="class-inheritance-vtable">Class inheritance vtable<a class="anchorjs-link" href="#class-inheritance-vtable"></a></h2><p><figure><img data-src="/imgs/vtable.png"
+         data-action="zoom"
+         class="lazyload"/>
+</figure>
+ <br/></p>
+<ul>
+<li>若要实现类型系统以及子类型的正确识别，以及多态调用，需要为每个类型创建一个“classname_vtable”的结构体，其中都为llvm::functiontype 类型 <br/></li>
+<li>将结构体放入之前class创建的结构体之中 <br/>
+例子： <br/></li>
+</ul>
+<!--listend-->
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-llvm" data-lang="llvm"><span class="line"><span class="cl"><span class="nv">%Point_vTable</span> <span class="p">=</span> <span class="k">type</span> <span class="p">{</span> <span class="k">i32</span> <span class="p">(</span><span class="nv">%Point</span><span class="p">*)*,</span> <span class="k">i32</span> <span class="p">(</span><span class="nv">%Point</span><span class="p">*,</span> <span class="k">i32</span><span class="p">,</span> <span class="k">i32</span><span class="p">)*</span> <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="nv">%Point</span> <span class="p">=</span> <span class="k">type</span> <span class="p">{</span> <span class="nv">%Point_vTable</span><span class="p">*,</span> <span class="k">i32</span><span class="p">,</span> <span class="k">i32</span> <span class="p">}</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-C++" data-lang="C++"><span class="line"><span class="cl"> <span class="kt">void</span> <span class="nf">buildVTable</span><span class="p">(</span><span class="n">llvm</span><span class="o">::</span><span class="n">StructType</span><span class="o">*</span> <span class="n">cls</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">className</span><span class="p">{</span><span class="n">cls</span><span class="o">-&gt;</span><span class="n">getName</span><span class="p">().</span><span class="n">data</span><span class="p">()};</span>
+</span></span><span class="line"><span class="cl">   <span class="k">auto</span> <span class="n">vTableName</span> <span class="o">=</span> <span class="n">className</span> <span class="o">+</span> <span class="s">&#34;_vTable&#34;</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="c1">// The vTable should already exist:
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="k">auto</span> <span class="n">vTableTy</span> <span class="o">=</span> <span class="n">llvm</span><span class="o">::</span><span class="n">StructType</span><span class="o">::</span><span class="n">getTypeByName</span><span class="p">(</span><span class="o">*</span><span class="n">ctx</span><span class="p">,</span> <span class="n">vTableName</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">llvm</span><span class="o">::</span><span class="n">Constant</span><span class="o">*&gt;</span> <span class="n">vTableMethods</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">   <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">llvm</span><span class="o">::</span><span class="n">Type</span><span class="o">*&gt;</span> <span class="n">vTableMethodTys</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="k">for</span> <span class="p">(</span><span class="k">auto</span><span class="o">&amp;</span> <span class="nl">methodInfo</span> <span class="p">:</span> <span class="n">classMap_</span><span class="p">[</span><span class="n">className</span><span class="p">].</span><span class="n">methodsMap</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">     <span class="k">auto</span> <span class="n">method</span> <span class="o">=</span> <span class="n">methodInfo</span><span class="p">.</span><span class="n">second</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">     <span class="n">vTableMethods</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">method</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">     <span class="n">vTableMethodTys</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">method</span><span class="o">-&gt;</span><span class="n">getType</span><span class="p">());</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="n">vTableTy</span><span class="o">-&gt;</span><span class="n">setBody</span><span class="p">(</span><span class="n">vTableMethodTys</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="k">auto</span> <span class="n">vTableValue</span> <span class="o">=</span> <span class="n">llvm</span><span class="o">::</span><span class="n">ConstantStruct</span><span class="o">::</span><span class="n">get</span><span class="p">(</span><span class="n">vTableTy</span><span class="p">,</span> <span class="n">vTableMethods</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">   <span class="n">createGlobalVar</span><span class="p">(</span><span class="n">vTableName</span><span class="p">,</span> <span class="n">vTableValue</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"> <span class="p">}</span>
+</span></span></code></pre></div><h2 id="functor">Functor<a class="anchorjs-link" href="#functor"></a></h2><p>关键在与为class 创建一个类似构造函数的与类型绑定的独特函数，当以调用函数的方式调用某个class的实例时，调用次方法。 <br/></p>
+<h2 id="closure">Closure<a class="anchorjs-link" href="#closure"></a></h2><p><figure>
+  <a class="paragraph-image">
+    <img data-src="/imgs/closure.png" data-action="zoom" alt=""  class="lazyload">
+  </a>
+  
+</figure> <br/>
+Functor 加 自由变量即堆上变量。将一个堆上变量作为参数,传递给拥有相应处理变量function的类型的构造函数，此类型的functor函数例如取名为_<em>call</em>_()函数为实际的处理函数。 <br/>
+以lisp举例 <br/></p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-lisp" data-lang="lisp"><span class="line"><span class="cl"> <span class="p">(</span><span class="nc">class</span> <span class="nv">SetThatType</span> <span class="nc">null</span>
+</span></span><span class="line"><span class="cl">    <span class="p">(</span><span class="nv">begin</span>
+</span></span><span class="line"><span class="cl">      <span class="p">(</span><span class="nv">var</span> <span class="p">(</span><span class="nv">anyType</span> <span class="nv">AnyType</span><span class="p">)</span> <span class="mi">0</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="p">(</span><span class="nv">def</span> <span class="nv">constructor</span> <span class="p">(</span><span class="nv">self</span> <span class="p">(</span><span class="nv">anyType</span> <span class="nv">AnyType</span><span class="p">))</span> <span class="nv">-&gt;</span> <span class="nv">SetThatType</span>
+</span></span><span class="line"><span class="cl">         <span class="p">(</span><span class="nv">begin</span>
+</span></span><span class="line"><span class="cl">           <span class="p">(</span><span class="nf">set</span> <span class="p">(</span><span class="nv">prop</span> <span class="nv">self</span> <span class="nv">anyType</span><span class="p">)</span> <span class="nv">anyType</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">           <span class="nv">self</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">     <span class="p">(</span><span class="nv">def</span> <span class="nv">__call__</span> <span class="p">(</span><span class="nv">self</span> <span class="nv">value</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">       <span class="p">(</span><span class="nv">begin</span>
+</span></span><span class="line"><span class="cl">         <span class="p">(</span><span class="nf">set</span> <span class="p">(</span><span class="nv">prop</span> <span class="p">(</span><span class="nv">prop</span> <span class="nv">self</span> <span class="nv">anyType</span><span class="p">)</span> <span class="nv">value</span><span class="p">)</span> <span class="nv">value</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">         <span class="nv">value</span><span class="p">))))</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="p">(</span><span class="nv">var</span> <span class="nv">n</span> <span class="p">(</span><span class="nv">new</span> <span class="nv">AnyType</span> <span class="nv">anyValue</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl"><span class="p">(</span><span class="nv">var</span> <span class="nv">setN</span> <span class="p">(</span><span class="nv">new</span> <span class="nv">SetThatType</span> <span class="nv">n</span><span class="p">))</span> <span class="nv">//setN</span> <span class="nv">此时是一个SetThatType实例</span>
+</span></span><span class="line"><span class="cl"><span class="p">(</span><span class="nv">setN</span><span class="p">)</span> <span class="nv">//functor</span> <span class="nv">以调用函数的形式调用类型实例</span><span class="err">，</span><span class="nv">即调用其__call__函数</span>
+</span></span></code></pre></div>
 
         <hr style="visibility: hidden;" />
         <ul class="pager">
@@ -325,6 +390,13 @@ on Fri, Jan 10, 2025
             </a>
           </li>
           
+          
+          <li class="next">
+            <a href="/posts/2024/06/llvm-backend/" data-toggle="tooltip" data-placement="top" title="LLVM Backend">
+              Next<br>
+              <span>LLVM Backend</span>
+            </a>
+          </li>
           
         </ul>
         <hr style="visibility: hidden;" />
@@ -713,8 +785,6 @@ on Fri, Jan 10, 2025
    });
  });
 </script>
-
-
 
 
 
